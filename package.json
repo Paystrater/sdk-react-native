@@ -1,0 +1,92 @@
+{
+  "name": "@paystrater/react-native",
+  "version": "0.1.0-next.0",
+  "description": "Paystrater checkout for React Native: Pay with Paystrater and Transfer to Pay, in plain JavaScript with no native modules.",
+  "license": "MIT",
+  "author": "Paystrater",
+  "homepage": "https://docs.paystrater.com/docs/sdks/react-native",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Paystrater/sdk-react-native.git"
+  },
+  "bugs": "https://github.com/Paystrater/sdk-react-native/issues",
+  "keywords": [
+    "paystrater",
+    "checkout",
+    "payments",
+    "stablecoin",
+    "react-native",
+    "expo"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "react-native": "./dist/esm/index.js",
+  "types": "./dist/esm/types/index.d.ts",
+  "exports": {
+    ".": {
+      "react-native": {
+        "types": "./dist/esm/types/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "import": {
+        "types": "./dist/esm/types/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/types/index.d.ts",
+        "default": "./dist/cjs/index.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-native": ">=0.72"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "sync-core": "node scripts/sync-core.mjs",
+    "check:core": "node scripts/sync-core.mjs --check",
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "size": "node scripts/size.mjs",
+    "check:network": "node scripts/check-network.mjs",
+    "lint:package": "publint && attw --pack .",
+    "check": "npm run check:core && npm run typecheck && npm run check:network && npm test && npm run build && npm run size && npm run lint:package && npm run pack:check",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "pack:check": "npm pack --dry-run"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "0.18.5",
+    "@changesets/cli": "3.0.3",
+    "@testing-library/react": "16.3.3",
+    "@types/react": "19.3.0",
+    "esbuild": "0.28.2",
+    "jsdom": "30.1.3",
+    "openapi-typescript": "7.13.0",
+    "publint": "0.3.25",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-native": "0.88.1",
+    "typescript": "5.9.3",
+    "vitest": "5.0.5"
+  },
+  "overrides": {
+    "@redocly/openapi-core": {
+      "minimatch": "11.0.4"
+    }
+  }
+}

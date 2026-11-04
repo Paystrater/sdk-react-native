@@ -1,0 +1,34 @@
+# Every push and pull request: the shared core matches @paystrater/react's,
+# types, the network rule, tests, the build, the size budget, publint,
+# arethetypeswrong and npm pack
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      # The core is copied from @paystrater/react; check it against that repository's main branch.
+      # sdk-react is public; SDK_REACT_READ_TOKEN is only needed if it is ever made private again.
+      - uses: actions/checkout@v6
+        with:
+          repository: Paystrater/sdk-react
+          path: sdk-react
+          token: ${{ secrets.SDK_REACT_READ_TOKEN || github.token }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm audit signatures
+      - run: npm run check
+        env:
+          SDK_REACT_CORE: sdk-react/src/core
