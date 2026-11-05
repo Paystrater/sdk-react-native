@@ -35,6 +35,8 @@ describe("theme", () => {
     expect(light.borderRadius).toBe(8)
     expect(light.borderRadiusSurface).toBe(12)
     expect(themeFor({ theme: "auto" }, true).colors.colorBackground).toBe("#0C0D10")
+    expect(themeFor({ theme: "dark" }, false).colors.colorPrimary).toBe("#A2AED1")
+    expect(themeFor({ theme: "dark" }, false).colors.colorOnPrimary).toBe("#0A1224")
   })
   it("uses a single font name, never a CSS stack", () => {
     expect(themeFor(undefined, false).fontFamily).toBeUndefined()
