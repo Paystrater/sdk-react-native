@@ -66,6 +66,15 @@ describe("<PaystraterCheckout> for React Native", () => {
     expect(screen.getByText("Test mode")).toBeTruthy()
   })
 
+  it("shows the error and Try again when the first read fails, not an endless spinner", async () => {
+    serve(() => {
+      throw new TypeError("Network request failed")
+    })
+    render(<PaystraterCheckout paymentId={ID} publishableKey={PK_TEST} />)
+    expect(await screen.findByText(/couldn't reach Paystrater/, {}, { timeout: 3000 })).toBeTruthy()
+    expect(screen.getByText("Try again")).toBeTruthy()
+  })
+
   it("sends Pay with Paystrater, then opens the Paystrater app on the request", async () => {
     let sent = false
     serve((req) => {
