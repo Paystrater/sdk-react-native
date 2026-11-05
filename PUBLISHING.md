@@ -23,12 +23,23 @@ Use patch for fixes, minor for new features and major for breaking changes. The 
 **2. Check it.**
 
 ```bash
+nvm use                               # Node 24 from .nvmrc
 npm run sync-core && npm run check
 ```
 
 The core must match `@paystrater/react`'s, with `sdk-react` checked out beside this folder.
 
 **3. Merge.** Commit, push `dev`, and merge it into `main` by pull request once CI passes. Merge `sdk-react` first whenever the shared core changes, because this repository's CI compares its copy with `main` of `sdk-react`.
+
+```bash
+git add -A
+git commit -m "feat: <what changed>"
+git commit -am "chore: release 0.1.0-next.1"   # the version bump from step 1, if it isn't in the first commit
+git push origin dev
+gh pr create --base main --head dev --fill
+gh pr merge --merge                            # once sdk-react is merged and CI is green
+```
+
 
 **4. Tag `main`.** The tag must be `v` plus the version in `package.json`.
 
@@ -38,6 +49,12 @@ git checkout main && git pull && git tag v0.1.0-next.1 && git push origin v0.1.0
 
 **5. Approve.** Approve the **Release** job in GitHub, wait for it to finish, then open the package's **Staged Packages** tab on npmjs.com, check the version and click **Approve**. This needs 2FA on your npm account.
 
+**6. Point `latest` at it.** A pre-release goes to the `next` tag, but setups and the docs install with the plain `npm install @paystrater/react-native` (or `npx expo install @paystrater/react-native`), which takes `latest`. So move `latest` to every new release (a stable version goes to `latest` by itself, so skip this for one):
+
+```bash
+npm dist-tag add @paystrater/react-native@0.1.0-next.1 latest --otp=<code from your authenticator>
+```
+
 Then confirm what went out:
 
 ```bash
@@ -45,6 +62,16 @@ npm view @paystrater/react-native dist-tags
 ```
 
 Before the first stable release, test a `next` version on staging with test keys: a test merchant's `pk_test_…` key and a payment created on `https://staging-api.paystrater.com`. Run the checkout end to end in a development build on iOS and Android, and in Expo Go.
+
+## When the API changes
+
+This package has no types script of its own. Its API types and the rest of the shared core are copied from `@paystrater/react`, so follow the API there first: run `npm run types` in `sdk-react` and merge it, then copy the result here.
+
+```bash
+npm run sync-core   # copies ../sdk-react/src/core, generated types included, into src/core
+npm run check       # check:core fails while the copy differs from sdk-react
+git add src/core && git commit -m "feat: follow the API's <change>"
+```
 
 ## If a release fails
 
