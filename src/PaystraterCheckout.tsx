@@ -227,19 +227,22 @@ function Body({ ctx }: { ctx: Ctx }) {
   ) : null
   const back = methods.length > 1 && !c.payment?.method ? <Button ctx={ctx} kind="link" label={t.back} onPress={c.back} /> : null
 
+  const problem = (
+    <View style={s.stack}>
+      {title(t.errorTitle)}
+      <Text style={s.alert} accessibilityRole="alert">
+        {errorText(c.error)}
+      </Text>
+      {c.error && (c.error.kind === "network" || c.error.kind === "timeout" || c.error.status >= 500) ? <Button ctx={ctx} kind="secondary" label={t.tryAgain} onPress={c.refresh} /> : null}
+    </View>
+  )
+
   switch (c.stage) {
     case "loading":
-      return <ActivityIndicator accessibilityLabel={t.loading} color={ctx.theme.colors.colorPrimary} />
+      // The first read failed: say so, and keep trying behind the message
+      return c.error ? problem : <ActivityIndicator accessibilityLabel={t.loading} color={ctx.theme.colors.colorPrimary} />
     case "unavailable":
-      return (
-        <View style={s.stack}>
-          {title(t.errorTitle)}
-          <Text style={s.alert} accessibilityRole="alert">
-            {errorText(c.error)}
-          </Text>
-          {c.error && (c.error.kind === "network" || c.error.kind === "timeout" || c.error.status >= 500) ? <Button ctx={ctx} kind="secondary" label={t.tryAgain} onPress={c.refresh} /> : null}
-        </View>
-      )
+      return problem
     case "methods":
       return (
         <View style={s.stack}>
