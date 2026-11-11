@@ -34,9 +34,9 @@ describe("theme", () => {
     expect(light.colors.colorPrimary).toBe("#285BB6")
     expect(light.borderRadius).toBe(8)
     expect(light.borderRadiusSurface).toBe(12)
-    expect(themeFor({ theme: "auto" }, true).colors.colorBackground).toBe("#0C0D10")
+    expect(themeFor({ theme: "auto" }, true).colors.colorBackground).toBe("#24272F")
     expect(themeFor({ theme: "dark" }, false).colors.colorPrimary).toBe("#A2AED1")
-    expect(themeFor({ theme: "dark" }, false).colors.colorOnPrimary).toBe("#0A1224")
+    expect(themeFor({ theme: "dark" }, false).colors.colorOnPrimary).toBe("#131519")
   })
   it("uses a single font name, never a CSS stack", () => {
     expect(themeFor(undefined, false).fontFamily).toBeUndefined()
