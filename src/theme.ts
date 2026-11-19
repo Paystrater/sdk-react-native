@@ -6,11 +6,17 @@ import { resolveTheme, type Appearance, type ThemeVariables } from "./core/theme
 export type { Appearance, ThemeName, ThemeVariables } from "./core/theme.js"
 
 export interface PaystraterTheme {
-  colors: Omit<ThemeVariables, "fontFamily" | "fontFamilyMono" | "borderRadius" | "borderRadiusSurface">
+  colors: Omit<ThemeVariables, "fontFamily" | "fontFamilyMono" | "borderRadius" | "borderRadiusSurface" | "borderRadiusButton" | "borderRadiusCard">
   fontFamily?: string
   fontFamilyMono?: string
+  /** Inputs and chain chips */
   borderRadius: number
+  /** Method cards and wells */
   borderRadiusSurface: number
+  /** Buttons: pills */
+  borderRadiusButton: number
+  /** The checkout card */
+  borderRadiusCard: number
 }
 
 // A CSS font stack means nothing on a phone: only a single font name is used, else the system font
@@ -21,12 +27,14 @@ const radius = (value: string, fallback: number) => {
 }
 
 export function themeFor(appearance: Appearance | undefined, prefersDark: boolean): PaystraterTheme {
-  const { fontFamily, fontFamilyMono, borderRadius, borderRadiusSurface, ...colors } = resolveTheme(appearance, prefersDark)
+  const { fontFamily, fontFamilyMono, borderRadius, borderRadiusSurface, borderRadiusButton, borderRadiusCard, ...colors } = resolveTheme(appearance, prefersDark)
   return {
     colors,
     fontFamily: singleFont(fontFamily),
     fontFamilyMono: singleFont(fontFamilyMono) ?? Platform.select({ ios: "Menlo", android: "monospace", default: undefined }),
-    borderRadius: radius(borderRadius, 8),
-    borderRadiusSurface: radius(borderRadiusSurface, 12)
+    borderRadius: radius(borderRadius, 14),
+    borderRadiusSurface: radius(borderRadiusSurface, 14),
+    borderRadiusButton: radius(borderRadiusButton, 24),
+    borderRadiusCard: radius(borderRadiusCard, 18)
   }
 }
