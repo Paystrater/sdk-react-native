@@ -13,7 +13,7 @@ const result = await build({
   target: "es2020",
   platform: "neutral",
   // Brand images are asset files, not JavaScript
-  external: ["react", "react-native", "react/jsx-runtime", "./assets/*"],
+  external: ["react", "react-native", "react/jsx-runtime", "./assets/*", "./optional/*"],
   jsx: "automatic",
   write: false,
   logLevel: "warning"

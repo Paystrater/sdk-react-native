@@ -5,12 +5,19 @@ import type { CheckoutPayment } from "../src/core/types.js"
 import { deposit, fakeFetch, ID, ok, payment, PK_TEST, type Recorded } from "./helpers.js"
 import { Linking, setAppState, Share } from "./react-native.js"
 
+// The app's clipboard module, if any (src/optional/clipboard.js); none by default
+const clip = vi.hoisted(() => ({ setter: undefined as undefined | ((text: string) => Promise<unknown>) }))
+vi.mock("../src/optional/clipboard.js", () => ({ clipboardSetter: () => clip.setter }))
+
 function serve(route: (req: Recorded) => Response | Promise<Response>) {
   const net = fakeFetch(route)
   vi.stubGlobal("fetch", net.fetch)
   return net
 }
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => {
+  vi.unstubAllGlobals()
+  clip.setter = undefined
+})
 
 const lockedTtp = (extra: Partial<CheckoutPayment> = {}) =>
   payment({
@@ -90,7 +97,8 @@ describe("<PaystraterCheckout> for React Native", () => {
     fireEvent.click(screen.getByText("Continue"))
     expect(await screen.findByText("Pay rcv_test0001 for Acme")).toBeTruthy()
     expect(net.calls.some((call) => call.method === "POST" && call.url.endsWith("/v1/checkout/agentic"))).toBe(true)
-    fireEvent.click(screen.getByText("Copy prompt"))
+    // No clipboard module in this app, so the prompt is shared
+    fireEvent.click(screen.getByText("Share prompt"))
     expect(Share.share).toHaveBeenCalledWith({ message: "Pay rcv_test0001 for Acme" })
     expect(screen.queryByRole("button", { name: /Back to payment methods/ })).toBeNull()
   })
@@ -138,7 +146,7 @@ describe("<PaystraterCheckout> for React Native", () => {
     expect(screen.getByText("Try again")).toBeTruthy()
   })
 
-  it("sends Pay with Paystrater, then opens the Paystrater app on the request", async () => {
+  it("sends Pay with Paystrater without opening the app, and opens it only from the button", async () => {
     let sent = false
     serve((req) => {
       if (req.method === "POST") sent = true
@@ -149,6 +157,9 @@ describe("<PaystraterCheckout> for React Native", () => {
     fireEvent.change(screen.getByLabelText("Paystrater ID or username"), { target: { value: "ada" } })
     fireEvent.click(screen.getByText("Send to my app"))
     expect(await screen.findByText("Sent to Ada Lovelace")).toBeTruthy()
+    expect(Linking.openURL).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByText("Open the Paystrater app"))
+    expect(Linking.openURL).toHaveBeenCalledTimes(1)
     expect(Linking.openURL).toHaveBeenCalledWith(`https://app.paystrater.com/pay?id=${ID}`)
   })
 
@@ -161,6 +172,21 @@ describe("<PaystraterCheckout> for React Native", () => {
     expect(Linking.openURL).not.toHaveBeenCalled()
   })
 
+  it("copies the address and the exact amount with the app's clipboard module, and says Copied", async () => {
+    const copied: string[] = []
+    clip.setter = async (text) => copied.push(text)
+    serve(() => ok(lockedTtp()))
+    render(<PaystraterCheckout paymentId={ID} publishableKey={PK_TEST} />)
+    await screen.findByText(/Send exactly/)
+    expect(screen.queryByText("Share address")).toBeNull()
+    expect(screen.queryByText(/Press and hold/)).toBeNull()
+    fireEvent.click(screen.getByText("Copy address"))
+    fireEvent.click(screen.getByText("Copy amount"))
+    await waitFor(() => expect(screen.getAllByText("Copied")).toHaveLength(2))
+    expect(copied).toEqual([deposit().depositAddress, "25.25"])
+    expect(Share.share).not.toHaveBeenCalled()
+  })
+
   it("shows the deposit with selectable text and a share sheet, and no QR", async () => {
     serve(() => ok(lockedTtp()))
     const { container } = render(<PaystraterCheckout paymentId={ID} publishableKey={PK_TEST} />)
@@ -168,8 +194,11 @@ describe("<PaystraterCheckout> for React Native", () => {
     const address = screen.getByText(deposit().depositAddress)
     expect(address.getAttribute("data-selectable")).toBe("true")
     expect(container.querySelector("svg")).toBeNull()
+    expect(screen.getByText("Press and hold the address or the amount to copy it.")).toBeTruthy()
     fireEvent.click(screen.getByText("Share address"))
     expect(Share.share).toHaveBeenCalledWith({ message: deposit().depositAddress })
+    fireEvent.click(screen.getByText("Share amount"))
+    expect(Share.share).toHaveBeenCalledWith({ message: "25.25" })
   })
 
   it("shows Open in wallet only when a wallet can open the ethereum: link", async () => {
