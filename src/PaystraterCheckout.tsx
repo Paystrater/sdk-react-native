@@ -326,7 +326,10 @@ function Body({ ctx }: { ctx: Ctx }) {
     case "methods":
       return (
         <View style={s.stack}>
-          {title(t.chooseMethod)}
+          {/* A smaller heading, tucked close to the first tile */}
+          <Text style={s.methodsTitle} accessibilityRole="header">
+            {t.chooseMethod}
+          </Text>
           <View style={s.methods}>
             {methods.map((m) => (
               <MethodTile
@@ -443,7 +446,7 @@ function TransferForm({ ctx, title, actionError, back }: StepProps) {
               </Pressable>
             ))}
           </View>
-          {problem === "chain" ? <Text style={s.error}>{t.chooseChain}</Text> : null}
+          {problem === "chain" ? <Text style={s.error}>{t.chooseChainRequired}</Text> : null}
         </View>
       ) : null}
       <Field ctx={ctx} label={t.emailLabel} optional help={t.emailHelp} error={problem === "email" ? t.emailFormat : undefined} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoComplete="email" maxLength={120} />
@@ -489,7 +492,7 @@ function Agent({ ctx, title, actionError, back }: StepProps) {
         <Text selectable style={[s.well, s.mono]}>
           {prompt}
         </Text>
-        <CopyButton ctx={ctx} value={prompt} label={t.copyPrompt} shareLabel={t.sharePrompt} />
+        <CopyButton ctx={ctx} value={prompt} label={t.copyPrompt} />
         {actionError}
       </View>
     )
@@ -497,7 +500,7 @@ function Agent({ ctx, title, actionError, back }: StepProps) {
   return (
     <View style={s.stack}>
       {title(t.agentTitle, true)}
-      <Text style={s.muted}>{t.agentHint}</Text>
+      <Text style={s.muted}>{t.agentStartHint}</Text>
       {actionError}
       <Button ctx={ctx} label={t.continue} disabled={c.busy} onPress={() => void c.startAgentic()} />
       {back(t.methodAgentic)}
@@ -505,12 +508,14 @@ function Agent({ ctx, title, actionError, back }: StepProps) {
   )
 }
 
-/** Copies with the app's clipboard module, and says "Copied"; without one it opens the share sheet */
-function CopyButton({ ctx, value, label, shareLabel }: { ctx: Ctx; value: string; label: string; shareLabel: string }) {
+/** Copies and says "Copied"; with no clipboard at all it opens the share sheet, still labelled Copy */
+function CopyButton({ ctx, value, label }: { ctx: Ctx; value: string; label: string }) {
   const [done, setDone] = useState(false)
   const copy = clipboardSetter()
-  if (!copy) return <Button ctx={ctx} kind="tonal" label={shareLabel} onPress={() => void Share.share({ message: value }).catch(() => undefined)} />
-  return <Button ctx={ctx} kind="tonal" label={done ? ctx.t.copied : label} onPress={() => void copy(value).then(() => (setDone(true), setTimeout(setDone, 2000, false)), () => undefined)} />
+  const onPress = copy
+    ? () => void copy(value).then(() => (setDone(true), setTimeout(setDone, 2000, false)), () => undefined)
+    : () => void Share.share({ message: value }).catch(() => undefined)
+  return <Button ctx={ctx} kind="tonal" label={done ? ctx.t.copied : label} onPress={onPress} />
 }
 
 function DepositView({ ctx, deposit, title, actionError }: Omit<StepProps, "back"> & { deposit: Deposit }) {
@@ -538,7 +543,12 @@ function DepositView({ ctx, deposit, title, actionError }: Omit<StepProps, "back
 
   return (
     <View style={s.stack}>
-      {title(fill(t.sendExactly, { amount: formatAmount(deposit.amount), token: deposit.tokenTicker, chain }))}
+      {/* What to send, as a calm callout in the success tones rather than a large heading */}
+      <View style={s.callout}>
+        <Text style={s.calloutText} accessibilityRole="header">
+          {fill(t.sendExactly, { amount: formatAmount(deposit.amount), token: deposit.tokenTicker, chain })}
+        </Text>
+      </View>
       {deposit.fee && isPositiveAmount(deposit.fee) ? <Text style={s.muted}>{fill(t.fee, { fee: formatAmount(deposit.fee), token: deposit.tokenTicker })}</Text> : null}
       <View style={s.well}>
         <Text style={s.label}>{t.depositAddress}</Text>
@@ -546,13 +556,17 @@ function DepositView({ ctx, deposit, title, actionError }: Omit<StepProps, "back
         <Text selectable style={s.mono} accessibilityLabel={`${t.depositAddress}: ${deposit.depositAddress}`}>
           {deposit.depositAddress}
         </Text>
-        <Text selectable style={[s.body, { fontWeight: "700" }]}>
+        <Text style={s.label}>{t.totalAmount}</Text>
+        {/* The brand text colour, which follows the merchant's colorPrimary and dark mode */}
+        <Text selectable style={[s.body, { fontWeight: "700", color: ctx.theme.colors.colorPrimaryText }]}>
           {formatAmount(deposit.amount)} {deposit.tokenTicker}
         </Text>
         {clipboardSetter() ? null : <Text style={s.help}>{t.selectToCopy}</Text>}
-        <CopyButton ctx={ctx} value={deposit.depositAddress} label={t.copyAddress} shareLabel={t.shareAddress} />
-        {/* The exact amount the server asked for, every decimal and no symbol */}
-        <CopyButton ctx={ctx} value={deposit.amount} label={t.copyAmount} shareLabel={t.shareAmount} />
+        {/* One row that wraps when it doesn't fit; the amount is the server's exact figure, no symbol */}
+        <View style={s.actions}>
+          <CopyButton ctx={ctx} value={deposit.depositAddress} label={t.copyAddress} />
+          <CopyButton ctx={ctx} value={deposit.amount} label={t.copyAmount} />
+        </View>
       </View>
       {walletReady && link ? <Button ctx={ctx} label={t.openInWallet} onPress={() => void ctx.openUrl(link)} /> : null}
       <Text style={s.note}>{fill(t.depositNotice, { token: deposit.tokenTicker, chain })}</Text>
@@ -647,11 +661,17 @@ function makeStyles(theme: PaystraterTheme) {
   const font = theme.fontFamily ? { fontFamily: theme.fontFamily } : null
   const mono = theme.fontFamilyMono ? { fontFamily: theme.fontFamilyMono } : null
   const pill = { borderRadius: theme.borderRadiusButton, alignItems: "center" as const, justifyContent: "center" as const }
+  // Button labels sit dead centre: no Android font padding, one line height
+  const centred = { lineHeight: 20, textAlign: "center" as const, textAlignVertical: "center" as const, includeFontPadding: false }
   return StyleSheet.create({
     root: { backgroundColor: k.colorBackground, borderColor: k.colorBorder, borderWidth: 1, borderRadius: theme.borderRadiusCard, padding: 20, overflow: "hidden" },
     ribbon: { position: "absolute", top: 12, right: 12, zIndex: 1, paddingHorizontal: 8, paddingVertical: 3, fontSize: 11, lineHeight: 16, fontWeight: "500", color: k.colorWarning, backgroundColor: k.colorSurfaceHover, borderRadius: 11, overflow: "hidden", ...font },
     header: { gap: 4, marginBottom: 20 },
     row: { flexDirection: "row", alignItems: "center", gap: 10 },
+    actions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+    methodsTitle: { fontSize: 16, lineHeight: 22, fontWeight: "600", color: k.colorText, marginBottom: -4, ...font },
+    callout: { padding: 12, borderRadius: theme.borderRadiusSurface, backgroundColor: k.colorSuccessSoft },
+    calloutText: { fontSize: 14, lineHeight: 20, fontWeight: "600", color: k.colorSuccess, ...font },
     headRow: { gap: 12, marginBottom: 20 },
     headRowTest: { paddingRight: 72 },
     rowBetween: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
@@ -679,11 +699,11 @@ function makeStyles(theme: PaystraterTheme) {
     methodHint: { marginTop: 2, fontSize: 12, lineHeight: 16, color: k.colorTextMuted, ...font },
     chevron: { width: 16, height: 16 },
     primary: { ...pill, minHeight: 48, paddingHorizontal: 24, backgroundColor: k.colorPrimary },
-    primaryText: { fontSize: 14, fontWeight: "500", color: k.colorOnPrimary, ...font },
+    primaryText: { fontSize: 14, fontWeight: "500", color: k.colorOnPrimary, ...centred, ...font },
     secondary: { ...pill, minHeight: 40, paddingHorizontal: 20, borderWidth: 1, borderColor: k.colorBorderStrong },
-    secondaryText: { fontSize: 14, fontWeight: "500", color: k.colorText, ...font },
+    secondaryText: { fontSize: 14, fontWeight: "500", color: k.colorText, ...centred, ...font },
     tonal: { ...pill, minHeight: 36, paddingHorizontal: 16, alignSelf: "flex-start", backgroundColor: k.colorPrimarySoft },
-    tonalText: { fontSize: 13, fontWeight: "500", color: k.colorPrimaryText, ...font },
+    tonalText: { fontSize: 13, fontWeight: "500", color: k.colorPrimaryText, ...centred, ...font },
     linkText: { fontSize: 13, fontWeight: "500", color: k.colorPrimaryText, ...font },
     pressed: { opacity: 0.85 },
     disabled: { opacity: 0.5 },

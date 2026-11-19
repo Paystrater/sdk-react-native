@@ -54,10 +54,14 @@ import { PaystraterCheckout } from "@paystrater/react-native"
 ## Payment methods
 
 - **Pay with Paystrater:** the customer enters their Paystrater ID or username; the SDK sends the request and opens `https://app.paystrater.com/pay?id=rcv_…`. With the Paystrater app installed, that opens the request in the app; without it, the page there links to the stores. When the customer comes back, the checkout reads the payment and shows the result.
-- **Transfer to Pay:** the customer picks a network; email, name and refund address are optional. The deposit address is selectable text (press and hold to copy) with a share button, and **Open in wallet** appears when an installed wallet can open an EIP-681 `ethereum:` link with the amount filled in. The token contract, network and chain ID sit in a collapsed **Payment details** section. There is no QR code: the payer is already on this phone.
-- **AI agent payments:** the customer taps **Continue** and gets a prompt for their AI agent, with a share button. The agent pays through Paystrater within the limits the customer set, and the checkout shows the result.
+- **Transfer to Pay:** the customer picks a network; email, name and refund address are optional. **Copy address** and **Copy amount** (the exact amount) sit on one row, and **Open in wallet** appears when an installed wallet can open an EIP-681 `ethereum:` link with the amount filled in. The token contract, network and chain ID sit in a collapsed **Payment details** section. There is no QR code: the payer is already on this phone.
+- **AI agent payments:** the customer taps **Continue** and gets a prompt for their AI agent, with a **Copy prompt** button. The agent pays through Paystrater within the limits the customer set, and the checkout shows the result.
 
 Which tokens a customer can pay in comes from your payment settings in the dashboard: stablecoins (USDC, USDT, USDT0, PYUSD, EURC, USDG, cNGN) and coins (ETH, BNB, SOL, HYPE, WETH), each on the networks that carry it. Transfer to Pay is not available on Solana yet, so SOL and Solana tokens are paid with Pay with Paystrater.
+
+### Copy
+
+Copy writes to the clipboard with no extra dependency. The SDK uses the first clipboard it finds: `expo-clipboard`, then `@react-native-clipboard/clipboard`, then the clipboard React Native still ships in core. If none is there (a future React Native without it, and neither package installed), the Copy buttons open the share sheet instead, and the address and amount stay selectable.
 
 ### Open in wallet
 
