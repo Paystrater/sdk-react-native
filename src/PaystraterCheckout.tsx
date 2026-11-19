@@ -2,6 +2,9 @@
 // hands off to the Paystrater app; Transfer to Pay shows the deposit with copy
 // (selectable text), share and, when a wallet can open it, an EIP-681 link.
 // No QR: the payer is on this phone. No native modules: Linking, Share, AppState.
+// It follows @paystrater/react's design (sdk-react src/react/styles.ts): a card
+// with a hairline edge, method tiles with icons, pill buttons, the amount in the
+// brand colour, "← <method>" under each step and "Powered by Paystrater" under all.
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import {
   AccessibilityInfo,
@@ -22,8 +25,9 @@ import {
 import { formatAmount, isPositiveAmount, walletLink } from "./core/amount.js"
 import type { Deposit, FieldProblem } from "./core/checkout.js"
 import { errorForPayer, type PaystraterError } from "./core/errors.js"
-import { fill, stringsFor, type Locale, type Strings } from "./core/strings.js"
+import { capitalizeWords, fill, fillParts, stringsFor, type Locale, type Strings } from "./core/strings.js"
 import type { CheckoutPayment, PaymentMethod } from "./core/types.js"
+import { ARROW_LEFT, CHEVRON, MARK, PAYSTRATER_SITE, WALLET, WORDMARK } from "./brand.js"
 import { themeFor, type Appearance, type PaystraterTheme } from "./theme.js"
 import { usePaystraterPayment, type PaystraterPayment, type PaystraterPaymentOptions } from "./usePaystraterPayment.js"
 
@@ -95,9 +99,11 @@ export function PaystraterCheckout(props: PaystraterCheckoutProps) {
   }, [c, t])
 
   const p = c.payment
-  const merchant = p?.merchantName || "the shop"
+  // Names are capitalized whatever case the data has (CSS capitalize on the web)
+  const merchantName = p?.merchantName ? capitalizeWords(p.merchantName) : ""
+  const merchant = merchantName || "the shop"
   const errorText = (e?: PaystraterError) => (e ? errorForPayer(e, c.mode) : undefined)
-  const ctx: Ctx = { c, t, s, theme, merchant, errorText, openUrl, onStartAgain: props.onStartAgain }
+  const ctx: Ctx = { c, t, s, theme, merchant, merchantName, errorText, openUrl, onStartAgain: props.onStartAgain }
 
   return (
     <View style={[s.root, props.style]} accessibilityLabel={p ? fill(t.payTo, { merchant }) : t.loading}>
@@ -108,6 +114,7 @@ export function PaystraterCheckout(props: PaystraterCheckoutProps) {
       )}
       {p && <Header payment={p} ctx={ctx} />}
       <Body ctx={ctx} />
+      <PoweredBy ctx={ctx} />
     </View>
   )
 }
@@ -117,7 +124,10 @@ interface Ctx {
   t: Strings
   s: ReturnType<typeof makeStyles>
   theme: PaystraterTheme
+  /** The merchant's name in capitals, or "the shop" */
   merchant: string
+  /** The merchant's name in capitals, or "" */
+  merchantName: string
   errorText: (e?: PaystraterError) => string | undefined
   openUrl: (url: string) => Promise<unknown>
   onStartAgain?: () => void
@@ -138,23 +148,30 @@ function initials(name: string) {
     .join("")
 }
 
+/** A sentence with every {name} value in capitals, the rest as written */
+function named(template: string, values: Record<string, string | undefined>): string {
+  return fillParts(template, values)
+    .map((part) => (part.key && part.key !== "amount" && part.key !== "token" ? capitalizeWords(part.text) : part.text))
+    .join("")
+}
+
 function Header({ payment, ctx }: { payment: CheckoutPayment; ctx: Ctx }) {
-  const { s, t } = ctx
+  const { s, t, merchantName } = ctx
   const [logoFailed, setLogoFailed] = useState(false)
-  const name = payment.merchantName || ""
+  const description = payment.description ? payment.description.charAt(0).toUpperCase() + payment.description.slice(1) : ""
   return (
     <View style={s.header}>
-      <View style={s.row}>
+      <View style={[s.row, s.headRow, ctx.c.mode === "test" ? s.headRowTest : null]}>
         {payment.merchantLogoUrl && !logoFailed ? (
-          <Image source={{ uri: payment.merchantLogoUrl }} style={s.logo} accessibilityIgnoresInvertColors onError={() => setLogoFailed(true)} />
+          <Image source={{ uri: payment.merchantLogoUrl }} style={[s.logo, s.logoImage]} accessibilityIgnoresInvertColors onError={() => setLogoFailed(true)} />
         ) : (
           <View style={s.logo} importantForAccessibility="no">
-            <Text style={s.strong}>{initials(name) || "₱"}</Text>
+            <Text style={s.initials}>{initials(merchantName) || "₱"}</Text>
           </View>
         )}
         <View style={s.grow}>
-          <Text style={s.strong}>{name}</Text>
-          {payment.description ? <Text style={s.muted}>{payment.description}</Text> : null}
+          <Text style={s.merchantName}>{merchantName}</Text>
+          {description ? <Text style={s.muted}>{description}</Text> : null}
         </View>
       </View>
       <Text style={s.label}>{t.amountDue}</Text>
@@ -170,10 +187,12 @@ function Header({ payment, ctx }: { payment: CheckoutPayment; ctx: Ctx }) {
   )
 }
 
-function Button({ ctx, label, onPress, kind = "primary", disabled }: { ctx: Ctx; label: string; onPress: () => void; kind?: "primary" | "secondary" | "link"; disabled?: boolean }) {
+type ButtonKind = "primary" | "secondary" | "tonal"
+
+function Button({ ctx, label, onPress, kind = "primary", disabled }: { ctx: Ctx; label: string; onPress: () => void; kind?: ButtonKind; disabled?: boolean }) {
   const { s } = ctx
-  const box = kind === "primary" ? s.primary : kind === "secondary" ? s.secondary : s.link
-  const text = kind === "primary" ? s.primaryText : kind === "secondary" ? s.secondaryText : s.linkText
+  const box = kind === "primary" ? s.primary : kind === "secondary" ? s.secondary : s.tonal
+  const text = kind === "primary" ? s.primaryText : kind === "secondary" ? s.secondaryText : s.tonalText
   return (
     <Pressable
       accessibilityRole="button"
@@ -189,20 +208,23 @@ function Button({ ctx, label, onPress, kind = "primary", disabled }: { ctx: Ctx;
 
 function Field({ ctx, label, optional, help, error, ...input }: { ctx: Ctx; label: string; optional?: boolean; help?: string; error?: string } & React.ComponentProps<typeof TextInput>) {
   const { s, t, theme } = ctx
+  const [focused, setFocused] = useState(false)
   return (
     <View style={s.field}>
       <Text style={s.fieldLabel}>
         {label}
-        {optional ? <Text style={s.muted}> ({t.optional})</Text> : null}
+        {optional ? <Text style={s.optional}> ({t.optional})</Text> : null}
       </Text>
       <TextInput
         accessibilityLabel={label}
         accessibilityHint={error ?? help}
-        placeholderTextColor={theme.colors.colorTextMuted}
-        style={[s.input, error ? s.inputError : null]}
+        placeholderTextColor={theme.colors.colorTextSubtle}
+        style={[s.input, focused ? s.inputFocus : null, error ? s.inputError : null]}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
         {...input}
       />
-      {help ? <Text style={s.muted}>{help}</Text> : null}
+      {help ? <Text style={s.help}>{help}</Text> : null}
       {error ? (
         <Text style={s.error} accessibilityLiveRegion="polite">
           {error}
@@ -212,10 +234,64 @@ function Field({ ctx, label, optional, help, error, ...input }: { ctx: Ctx; labe
   )
 }
 
+/** "← Pay with Paystrater" under a step: the method in use, and the way back to the others */
+function BackRow({ ctx, method, canGoBack }: { ctx: Ctx; method: string; canGoBack: boolean }) {
+  const { s, t, c, theme } = ctx
+  if (!canGoBack) return <Text style={[s.backText, s.backStatic]}>{method}</Text>
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${t.back}, ${method}`}
+      onPress={c.back}
+      hitSlop={{ top: 4, bottom: 4 }}
+      style={({ pressed }) => [s.back, pressed ? s.backPressed : null]}
+    >
+      <Image source={ARROW_LEFT} style={[s.backArrow, { tintColor: theme.colors.colorTextMuted }]} accessibilityIgnoresInvertColors />
+      <Text style={s.backText}>{method}</Text>
+    </Pressable>
+  )
+}
+
+/** "Powered by Paystrater" under every screen; it opens paystrater.com */
+function PoweredBy({ ctx }: { ctx: Ctx }) {
+  const { s, t, theme } = ctx
+  return (
+    <View style={s.footer}>
+      <Pressable
+        accessibilityRole="link"
+        accessibilityLabel={`${t.poweredBy} Paystrater`}
+        onPress={() => void ctx.openUrl(PAYSTRATER_SITE).catch(() => undefined)}
+        hitSlop={8}
+        style={({ pressed }) => [s.powered, pressed ? s.pressed : null]}
+      >
+        <Text style={s.poweredText}>{t.poweredBy}</Text>
+        <Image source={WORDMARK} style={[s.wordmark, { tintColor: theme.colors.colorTextMuted }]} accessibilityIgnoresInvertColors />
+      </Pressable>
+    </View>
+  )
+}
+
+function MethodTile({ ctx, method, title, hint }: { ctx: Ctx; method: PaymentMethod; title: string; hint: string }) {
+  const { s, c, theme } = ctx
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={`${title}. ${hint}`} onPress={() => c.choose(method)} style={({ pressed }) => [s.method, pressed ? s.methodPressed : null]}>
+      <View style={s.methodIcon}>
+        <Image source={method === "pay_with_paystrater" ? MARK : WALLET} style={[s.methodIconImage, { tintColor: theme.colors.colorPrimaryText }]} accessibilityIgnoresInvertColors />
+      </View>
+      <View style={s.grow}>
+        <Text style={s.methodTitle}>{title}</Text>
+        <Text style={s.methodHint}>{hint}</Text>
+      </View>
+      <Image source={CHEVRON} style={[s.chevron, { tintColor: theme.colors.colorTextMuted }]} accessibilityIgnoresInvertColors />
+    </Pressable>
+  )
+}
+
 function Body({ ctx }: { ctx: Ctx }) {
   const { c, t, s, errorText } = ctx
-  const title = (text: string) => (
-    <Text style={s.title} accessibilityRole="header">
+  // hidden: a method step names its method in the row at the bottom; the heading stays for screen readers
+  const title = (text: string, hidden = false) => (
+    <Text style={hidden ? s.hidden : s.title} accessibilityRole="header">
       {text}
     </Text>
   )
@@ -225,7 +301,8 @@ function Body({ ctx }: { ctx: Ctx }) {
       {errorText(c.error)}
     </Text>
   ) : null
-  const back = methods.length > 1 && !c.payment?.method ? <Button ctx={ctx} kind="link" label={t.back} onPress={c.back} /> : null
+  const canGoBack = methods.length > 1 && !c.payment?.method
+  const back = (method: string) => <BackRow ctx={ctx} method={method} canGoBack={canGoBack} />
 
   const problem = (
     <View style={s.stack}>
@@ -240,21 +317,24 @@ function Body({ ctx }: { ctx: Ctx }) {
   switch (c.stage) {
     case "loading":
       // The first read failed: say so, and keep trying behind the message
-      return c.error ? problem : <ActivityIndicator accessibilityLabel={t.loading} color={ctx.theme.colors.colorPrimary} />
+      return c.error ? problem : <ActivityIndicator accessibilityLabel={t.loading} color={ctx.theme.colors.colorPrimaryText} />
     case "unavailable":
       return problem
     case "methods":
       return (
         <View style={s.stack}>
           {title(t.chooseMethod)}
-          {methods.map((m) => (
-            <Pressable key={m} accessibilityRole="button" onPress={() => c.choose(m)} style={({ pressed }) => [s.method, pressed ? s.pressed : null]}>
-              <Text style={s.strong}>{m === "pay_with_paystrater" ? t.methodPayWithPaystrater : t.methodTransferToPay}</Text>
-              <Text style={s.muted}>
-                {m === "pay_with_paystrater" ? t.methodPayWithPaystraterHint : fill(t.methodTransferToPayHint, { chains: c.chains.map((x) => x.chainName).join(", ") })}
-              </Text>
-            </Pressable>
-          ))}
+          <View style={s.methods}>
+            {methods.map((m) => (
+              <MethodTile
+                key={m}
+                ctx={ctx}
+                method={m}
+                title={m === "pay_with_paystrater" ? t.methodPayWithPaystrater : t.methodTransferToPay}
+                hint={m === "pay_with_paystrater" ? t.methodPayWithPaystraterHint : fill(t.methodTransferToPayHint, { chains: c.chains.map((x) => x.chainName).join(", ") })}
+              />
+            ))}
+          </View>
           {actionError}
         </View>
       )
@@ -272,7 +352,7 @@ function Body({ ctx }: { ctx: Ctx }) {
               <Text selectable style={[s.well, s.mono]}>
                 {c.payment.agentPrompt}
               </Text>
-              <Button ctx={ctx} kind="secondary" label={t.copyPrompt} onPress={() => void Share.share({ message: c.payment!.agentPrompt! })} />
+              <Button ctx={ctx} kind="tonal" label={t.copyPrompt} onPress={() => void Share.share({ message: c.payment!.agentPrompt! })} />
             </>
           ) : null}
         </View>
@@ -281,9 +361,9 @@ function Body({ ctx }: { ctx: Ctx }) {
     case "updating":
       return (
         <View style={s.result}>
-          <ActivityIndicator color={ctx.theme.colors.colorPrimary} />
+          <ActivityIndicator color={ctx.theme.colors.colorPrimaryText} />
           {title(c.stage === "processing" ? t.statusProcessing : t.statusUnknown)}
-          {c.stage === "processing" ? <Text style={s.muted}>{t.statusProcessingHint}</Text> : null}
+          {c.stage === "processing" ? <Text style={[s.muted, s.center]}>{t.statusProcessingHint}</Text> : null}
         </View>
       )
     case "final":
@@ -293,9 +373,9 @@ function Body({ ctx }: { ctx: Ctx }) {
 
 interface StepProps {
   ctx: Ctx
-  title: (text: string) => ReactNode
+  title: (text: string, hidden?: boolean) => ReactNode
   actionError: ReactNode
-  back?: ReactNode
+  back: (method: string) => ReactNode
 }
 
 function PayWithPaystrater({ ctx, title, actionError, back }: StepProps) {
@@ -310,7 +390,7 @@ function PayWithPaystrater({ ctx, title, actionError, back }: StepProps) {
     return (
       <View style={s.stack}>
         {title(t.approveInApp)}
-        {sent.name ? <Text style={s.note}>{fill(t.sentTo, { name: sent.name })}</Text> : null}
+        {sent.name ? <Text style={s.note}>{named(t.sentTo, { name: sent.name })}</Text> : null}
         <Text style={s.muted}>{t.approveInAppHint}</Text>
         <Button ctx={ctx} label={t.openApp} onPress={() => void ctx.openUrl(link)} />
         {left !== undefined ? <Text style={s.muted}>{left > 0 ? fill(t.expiresIn, { time: formatDuration(left) }) : t.expired}</Text> : null}
@@ -321,7 +401,7 @@ function PayWithPaystrater({ ctx, title, actionError, back }: StepProps) {
   }
   return (
     <View style={s.stack}>
-      {title(t.methodPayWithPaystrater)}
+      {title(t.methodPayWithPaystrater, true)}
       <Field ctx={ctx} label={t.payerLabel} help={t.payerHelp} error={problem === "payerRequired" ? t.payerRequired : undefined} value={payer} onChangeText={setPayer} maxLength={100} autoCapitalize="none" autoCorrect={false} textContentType="username" />
       {actionError}
       <Button
@@ -335,7 +415,7 @@ function PayWithPaystrater({ ctx, title, actionError, back }: StepProps) {
           if (res.ok && link) void ctx.openUrl(link).catch(() => undefined)
         }}
       />
-      {back}
+      {back(t.methodPayWithPaystrater)}
     </View>
   )
 }
@@ -351,10 +431,10 @@ function TransferForm({ ctx, title, actionError, back }: StepProps) {
 
   return (
     <View style={s.stack}>
-      {title(t.methodTransferToPay)}
+      {title(t.methodTransferToPay, true)}
       {c.chains.length > 1 ? (
         <View style={s.field}>
-          <Text style={s.label}>{t.chooseChain}</Text>
+          <Text style={s.fieldLabel}>{t.chooseChain}</Text>
           <View style={s.chains} accessibilityRole="radiogroup">
             {c.chains.map((ch) => (
               <Pressable
@@ -362,9 +442,9 @@ function TransferForm({ ctx, title, actionError, back }: StepProps) {
                 accessibilityRole="radio"
                 accessibilityState={{ checked: chosen === ch.chainId }}
                 onPress={() => setChainId(ch.chainId)}
-                style={[s.chain, chosen === ch.chainId ? s.chainOn : null]}
+                style={({ pressed }) => [s.chain, pressed ? s.methodPressed : null, chosen === ch.chainId ? s.chainOn : null]}
               >
-                <Text style={s.strong}>{ch.chainName}</Text>
+                <Text style={chosen === ch.chainId ? s.chainTextOn : s.chainText}>{ch.chainName}</Text>
               </Pressable>
             ))}
           </View>
@@ -397,7 +477,7 @@ function TransferForm({ ctx, title, actionError, back }: StepProps) {
           setProblem(res.ok ? undefined : res.field)
         }}
       />
-      {back}
+      {back(t.methodTransferToPay)}
     </View>
   )
 }
@@ -438,16 +518,16 @@ function DepositView({ ctx, deposit, title, actionError }: Omit<StepProps, "back
         <Text selectable style={s.muted}>
           {formatAmount(deposit.amount)} {deposit.tokenTicker}
         </Text>
+        <Text style={s.help}>{t.selectToCopy}</Text>
+        <Button ctx={ctx} kind="tonal" label={t.shareAddress} onPress={() => void Share.share({ message: deposit.depositAddress })} />
       </View>
-      <Text style={s.muted}>{t.selectToCopy}</Text>
-      <Button ctx={ctx} kind="secondary" label={t.shareAddress} onPress={() => void Share.share({ message: deposit.depositAddress })} />
       {walletReady && link ? <Button ctx={ctx} label={t.openInWallet} onPress={() => void ctx.openUrl(link)} /> : null}
       <Text style={s.note}>{fill(t.depositNotice, { token: deposit.tokenTicker, chain })}</Text>
       {isPositiveAmount(deposit.receivedAmount) ? <Text style={s.muted}>{fill(t.received, { amount: formatAmount(deposit.receivedAmount!), token: deposit.tokenTicker })}</Text> : null}
       <View style={s.rowBetween}>
-        <View style={s.row}>
-          <ActivityIndicator size="small" color={ctx.theme.colors.colorPrimary} />
-          <Text style={s.muted} accessibilityLiveRegion="polite">
+        <View style={[s.row, s.grow]}>
+          <ActivityIndicator size="small" color={ctx.theme.colors.colorPrimaryText} />
+          <Text style={[s.muted, s.grow]} accessibilityLiveRegion="polite">
             {t.waitingForDeposit}
           </Text>
         </View>
@@ -528,55 +608,83 @@ function Result({ ctx, title }: { ctx: Ctx; title: (text: string) => ReactNode }
   )
 }
 
+/** The web checkout's stylesheet (sdk-react src/react/styles.ts) in React Native */
 function makeStyles(theme: PaystraterTheme) {
   const k = theme.colors
   const font = theme.fontFamily ? { fontFamily: theme.fontFamily } : null
   const mono = theme.fontFamilyMono ? { fontFamily: theme.fontFamilyMono } : null
-  const control = { minHeight: 44, borderRadius: theme.borderRadius, alignItems: "center" as const, justifyContent: "center" as const, paddingHorizontal: 16 }
+  const pill = { borderRadius: theme.borderRadiusButton, alignItems: "center" as const, justifyContent: "center" as const }
   return StyleSheet.create({
-    root: { backgroundColor: k.colorBackground, borderColor: k.colorBorder, borderWidth: 1, borderRadius: theme.borderRadiusSurface, padding: 20, overflow: "hidden" },
-    ribbon: { position: "absolute", top: 0, right: 0, paddingHorizontal: 10, paddingVertical: 3, fontSize: 12, fontWeight: "600", color: k.colorWarning, backgroundColor: k.colorSurface, borderBottomLeftRadius: theme.borderRadius, ...font },
+    root: { backgroundColor: k.colorBackground, borderColor: k.colorBorder, borderWidth: 1, borderRadius: theme.borderRadiusCard, padding: 20, overflow: "hidden" },
+    ribbon: { position: "absolute", top: 12, right: 12, zIndex: 1, paddingHorizontal: 8, paddingVertical: 3, fontSize: 11, lineHeight: 16, fontWeight: "500", color: k.colorWarning, backgroundColor: k.colorSurfaceHover, borderRadius: 11, overflow: "hidden", ...font },
     header: { gap: 4, marginBottom: 20 },
     row: { flexDirection: "row", alignItems: "center", gap: 10 },
+    headRow: { gap: 12, marginBottom: 20 },
+    headRowTest: { paddingRight: 72 },
     rowBetween: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
     grow: { flex: 1 },
-    logo: { width: 40, height: 40, borderRadius: theme.borderRadius, borderWidth: 1, borderColor: k.colorBorder, backgroundColor: k.colorSurface, alignItems: "center", justifyContent: "center", marginBottom: 8 },
-    label: { fontSize: 13, color: k.colorTextMuted, ...font },
-    amount: { fontSize: 28, fontWeight: "600", color: k.colorText, ...mono },
-    token: { fontSize: 15, fontWeight: "400", color: k.colorTextMuted, ...font },
-    strong: { fontSize: 15, fontWeight: "600", color: k.colorText, ...font },
-    body: { fontSize: 15, color: k.colorTextBody, ...font },
-    muted: { fontSize: 13, color: k.colorTextMuted, ...font },
+    logo: { width: 40, height: 40, borderRadius: 13, backgroundColor: k.colorPrimarySoft, alignItems: "center", justifyContent: "center", overflow: "hidden" },
+    logoImage: { backgroundColor: k.colorSurface, borderWidth: 1, borderColor: k.colorBorder },
+    initials: { fontSize: 14, fontWeight: "600", color: k.colorPrimaryText, ...font },
+    merchantName: { fontSize: 16, lineHeight: 24, fontWeight: "600", color: k.colorText, ...font },
+    label: { fontSize: 12, lineHeight: 16, fontWeight: "500", color: k.colorTextMuted, ...font },
+    amount: { fontSize: 26, lineHeight: 34, fontWeight: "600", color: k.colorPrimaryText, ...mono },
+    token: { fontSize: 14, fontWeight: "500", color: k.colorTextMuted, ...font },
+    body: { fontSize: 15, lineHeight: 22, color: k.colorTextBody, ...font },
+    muted: { fontSize: 13, lineHeight: 18, color: k.colorTextMuted, ...font },
+    help: { fontSize: 12, lineHeight: 16, color: k.colorTextMuted, ...font },
     center: { textAlign: "center" },
-    title: { fontSize: 17, fontWeight: "600", color: k.colorText, ...font },
+    title: { fontSize: 18, lineHeight: 26, fontWeight: "600", color: k.colorText, ...font },
+    hidden: { position: "absolute", width: 1, height: 1, opacity: 0 },
     stack: { gap: 12 },
-    method: { minHeight: 56, padding: 14, gap: 2, borderWidth: 1, borderColor: k.colorBorder, borderRadius: theme.borderRadiusSurface },
-    primary: { ...control, backgroundColor: k.colorPrimary },
-    primaryText: { fontSize: 15, fontWeight: "600", color: k.colorOnPrimary, ...font },
-    secondary: { ...control, borderWidth: 1, borderColor: k.colorBorder, backgroundColor: k.colorBackground },
-    secondaryText: { fontSize: 15, fontWeight: "600", color: k.colorText, ...font },
-    link: { ...control, paddingHorizontal: 0 },
-    linkText: { fontSize: 15, fontWeight: "500", color: k.colorPrimaryText, textDecorationLine: "underline", ...font },
+    methods: { gap: 8 },
+    method: { minHeight: 68, flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 12, paddingLeft: 14, paddingRight: 16, borderWidth: 1, borderColor: k.colorBorder, borderRadius: theme.borderRadiusSurface, backgroundColor: k.colorBackground },
+    methodPressed: { backgroundColor: k.colorSurfaceHover, borderColor: k.colorBorderStrong },
+    methodIcon: { width: 40, height: 40, borderRadius: 13, backgroundColor: k.colorPrimarySoft, alignItems: "center", justifyContent: "center" },
+    methodIconImage: { width: 20, height: 20 },
+    methodTitle: { fontSize: 14, lineHeight: 20, fontWeight: "600", color: k.colorText, ...font },
+    methodHint: { marginTop: 2, fontSize: 12, lineHeight: 16, color: k.colorTextMuted, ...font },
+    chevron: { width: 16, height: 16 },
+    primary: { ...pill, minHeight: 48, paddingHorizontal: 24, backgroundColor: k.colorPrimary },
+    primaryText: { fontSize: 14, fontWeight: "500", color: k.colorOnPrimary, ...font },
+    secondary: { ...pill, minHeight: 40, paddingHorizontal: 20, borderWidth: 1, borderColor: k.colorBorderStrong },
+    secondaryText: { fontSize: 14, fontWeight: "500", color: k.colorText, ...font },
+    tonal: { ...pill, minHeight: 36, paddingHorizontal: 16, alignSelf: "flex-start", backgroundColor: k.colorPrimarySoft },
+    tonalText: { fontSize: 13, fontWeight: "500", color: k.colorPrimaryText, ...font },
+    linkText: { fontSize: 13, fontWeight: "500", color: k.colorPrimaryText, ...font },
     pressed: { opacity: 0.85 },
-    disabled: { opacity: 0.6 },
+    disabled: { opacity: 0.5 },
+    back: { flexDirection: "row", alignItems: "center", alignSelf: "flex-start", gap: 6, minHeight: 32, marginLeft: -10, paddingHorizontal: 10, borderRadius: theme.borderRadiusButton },
+    backPressed: { backgroundColor: k.colorSurfaceHover },
+    backArrow: { width: 14, height: 14 },
+    backText: { fontSize: 13, lineHeight: 18, fontWeight: "500", color: k.colorTextMuted, ...font },
+    backStatic: { alignSelf: "flex-start" },
+    footer: { marginTop: 24, paddingTop: 16, borderTopWidth: 1, borderTopColor: k.colorBorder, alignItems: "center" },
+    powered: { flexDirection: "row", alignItems: "center", gap: 7, minHeight: 24, paddingHorizontal: 8 },
+    poweredText: { fontSize: 12, lineHeight: 16, color: k.colorTextSubtle, ...font },
+    wordmark: { width: (15 * 258) / 45, height: 15 },
     field: { gap: 6 },
-    fieldLabel: { fontSize: 14, fontWeight: "500", color: k.colorText, ...font },
-    input: { minHeight: 44, paddingHorizontal: 12, fontSize: 15, color: k.colorText, backgroundColor: k.colorBackground, borderWidth: 1, borderColor: k.colorBorder, borderRadius: theme.borderRadius, ...font },
+    fieldLabel: { fontSize: 13, lineHeight: 18, fontWeight: "500", color: k.colorText, ...font },
+    optional: { fontSize: 12, fontWeight: "400", color: k.colorTextMuted, ...font },
+    input: { minHeight: 48, paddingHorizontal: 16, fontSize: 14, color: k.colorText, backgroundColor: k.colorBackground, borderWidth: 1, borderColor: k.colorBorder, borderRadius: theme.borderRadius, ...font },
+    inputFocus: { borderColor: k.colorPrimaryText },
     inputError: { borderColor: k.colorDanger },
-    error: { fontSize: 13, color: k.colorDanger, ...font },
-    alert: { padding: 12, fontSize: 14, color: k.colorDanger, borderWidth: 1, borderColor: k.colorDanger, borderRadius: theme.borderRadius, ...font },
-    note: { padding: 12, fontSize: 13, color: k.colorTextBody, backgroundColor: k.colorPrimarySoft, borderRadius: theme.borderRadius, overflow: "hidden", ...font },
+    error: { fontSize: 12, lineHeight: 16, color: k.colorDanger, ...font },
+    alert: { paddingVertical: 12, paddingHorizontal: 14, fontSize: 13, lineHeight: 18, color: k.colorDanger, backgroundColor: k.colorDangerSoft, borderRadius: 13, overflow: "hidden", ...font },
+    note: { paddingVertical: 12, paddingHorizontal: 14, fontSize: 13, lineHeight: 18, color: k.colorTextBody, backgroundColor: k.colorPrimarySoft, borderRadius: 13, overflow: "hidden", ...font },
     chains: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-    chain: { ...control, borderWidth: 1, borderColor: k.colorBorder },
-    chainOn: { borderColor: k.colorPrimary, backgroundColor: k.colorPrimarySoft },
-    well: { gap: 6, padding: 14, backgroundColor: k.colorSurface, borderWidth: 1, borderColor: k.colorBorder, borderRadius: theme.borderRadiusSurface },
-    mono: { fontSize: 14, color: k.colorText, ...mono },
-    disclosure: { minHeight: 44, justifyContent: "center" },
+    chain: { ...pill, minHeight: 40, paddingHorizontal: 16, borderWidth: 1, borderColor: k.colorBorder, backgroundColor: k.colorBackground },
+    chainOn: { borderColor: k.colorPrimaryText, backgroundColor: k.colorPrimarySoft },
+    chainText: { fontSize: 13, fontWeight: "500", color: k.colorText, ...font },
+    chainTextOn: { fontSize: 13, fontWeight: "500", color: k.colorPrimaryText, ...font },
+    well: { gap: 8, padding: 16, backgroundColor: k.colorSurface, borderWidth: 1, borderColor: k.colorBorder, borderRadius: theme.borderRadiusSurface, overflow: "hidden" },
+    mono: { fontSize: 13, lineHeight: 20, color: k.colorText, ...mono },
+    disclosure: { minHeight: 40, justifyContent: "center", alignSelf: "flex-start" },
     details: { gap: 4 },
-    result: { alignItems: "center", gap: 10, paddingVertical: 12 },
-    mark: { width: 44, height: 44, lineHeight: 40, borderRadius: 22, borderWidth: 2, textAlign: "center", fontSize: 22, fontWeight: "700", overflow: "hidden" },
-    markOk: { color: k.colorSuccess, borderColor: k.colorSuccess },
-    markBad: { color: k.colorDanger, borderColor: k.colorDanger },
-    markNeutral: { color: k.colorTextMuted, borderColor: k.colorBorder }
+    result: { alignItems: "center", gap: 10, paddingTop: 16, paddingBottom: 8 },
+    mark: { width: 52, height: 52, lineHeight: 52, borderRadius: 26, textAlign: "center", fontSize: 22, fontWeight: "700", overflow: "hidden" },
+    markOk: { color: k.colorSuccess, backgroundColor: k.colorSuccessSoft },
+    markBad: { color: k.colorDanger, backgroundColor: k.colorDangerSoft },
+    markNeutral: { color: k.colorTextMuted, backgroundColor: k.colorSurfaceHover }
   })
 }

@@ -13,7 +13,8 @@ const shared = {
   platform: "neutral",
   // BigInt literals (wallet links) need ES2020; Hermes has had BigInt since React Native 0.70
   target: "es2020",
-  external: ["react", "react-native", "react/jsx-runtime"],
+  // The brand images stay files next to the code, for Metro to bundle as assets
+  external: ["react", "react-native", "react/jsx-runtime", "./assets/*"],
   jsx: "automatic",
   define: { __SDK_VERSION__: JSON.stringify(pkg.version) },
   sourcemap: true,
@@ -21,6 +22,7 @@ const shared = {
 }
 await build({ ...shared, format: "esm", outdir: "dist/esm" })
 await build({ ...shared, format: "cjs", outdir: "dist/cjs" })
+for (const dir of ["dist/esm/assets", "dist/cjs/assets"]) cpSync("src/assets", dir, { recursive: true })
 execFileSync("node_modules/.bin/tsc", ["-p", "tsconfig.build.json", "--outDir", "dist/esm/types"], { stdio: "inherit" })
 cpSync("dist/esm/types", "dist/cjs/types", { recursive: true })
 writeFileSync("dist/cjs/package.json", JSON.stringify({ type: "commonjs" }, null, 2) + "\n")

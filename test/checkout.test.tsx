@@ -29,11 +29,19 @@ const lockedTtp = (extra: Partial<CheckoutPayment> = {}) =>
   })
 
 describe("theme", () => {
+  it("gives dark mode the brand's dark buttons for the setup code's light blue", () => {
+    const dark = themeFor({ variables: { colorPrimary: "#285BB6" } }, true)
+    expect([dark.colors.colorPrimary, dark.colors.colorOnPrimary, dark.colors.colorPrimaryText]).toEqual(["#A2AED1", "#131519", "#A2AED1"])
+    expect(themeFor(undefined, true).colors.colorBackground).toBe("#24272F")
+  })
   it("takes the web's variable names and the Paystrater defaults", () => {
     const light = themeFor(undefined, false)
     expect(light.colors.colorPrimary).toBe("#285BB6")
-    expect(light.borderRadius).toBe(8)
-    expect(light.borderRadiusSurface).toBe(12)
+    expect(light.borderRadius).toBe(14)
+    expect(light.borderRadiusSurface).toBe(14)
+    expect(light.borderRadiusButton).toBe(24)
+    expect(light.borderRadiusCard).toBe(18)
+    expect("borderRadiusButton" in light.colors).toBe(false)
     expect(themeFor({ theme: "auto" }, true).colors.colorBackground).toBe("#24272F")
     expect(themeFor({ theme: "dark" }, false).colors.colorPrimary).toBe("#A2AED1")
     expect(themeFor({ theme: "dark" }, false).colors.colorOnPrimary).toBe("#131519")
@@ -66,6 +74,32 @@ describe("<PaystraterCheckout> for React Native", () => {
     expect(screen.getByText("Transfer to Pay")).toBeTruthy()
     expect(screen.queryByText("Pay with an AI agent")).toBeNull()
     expect(screen.getByText("Test mode")).toBeTruthy()
+  })
+
+  it("shows Powered by Paystrater on every screen, opening paystrater.com", async () => {
+    const openUrl = vi.fn(async () => true)
+    serve(() => ok(payment()))
+    render(<PaystraterCheckout paymentId={ID} publishableKey={PK_TEST} openUrl={openUrl} />)
+    await screen.findByText("Choose how to pay")
+    fireEvent.click(screen.getByRole("link", { name: "Powered by Paystrater" }))
+    expect(openUrl).toHaveBeenCalledWith("https://paystrater.com")
+  })
+
+  it("capitalizes the merchant's name and colours the amount with the brand", async () => {
+    serve(() => ok(payment({ merchantName: "acme shoes", amount: "0.5" })))
+    render(<PaystraterCheckout paymentId={ID} publishableKey={PK_TEST} />)
+    expect(await screen.findByText("Acme Shoes")).toBeTruthy()
+    expect(screen.getByText(/^0\.50/)).toBeTruthy()
+  })
+
+  it("names the method under the step and goes back from there, only before paying", async () => {
+    serve(() => ok(payment()))
+    render(<PaystraterCheckout paymentId={ID} publishableKey={PK_TEST} />)
+    fireEvent.click(await screen.findByText("Pay with Paystrater"))
+    const back = screen.getByRole("button", { name: "Back to payment methods, Pay with Paystrater" })
+    fireEvent.click(back)
+    expect(await screen.findByText("Choose how to pay")).toBeTruthy()
+    expect(screen.queryByRole("button", { name: /Back to payment methods/ })).toBeNull()
   })
 
   it("shows the error and Try again when the first read fails, not an endless spinner", async () => {
@@ -150,7 +184,7 @@ describe("<PaystraterCheckout> for React Native", () => {
     render(<PaystraterCheckout paymentId={ID} publishableKey={PK_TEST} />)
     fireEvent.click(await screen.findByText("Transfer to Pay"))
     fireEvent.click(screen.getByRole("radio", { name: "Base" }))
-    fireEvent.click(screen.getByText("Show the deposit address"))
+    fireEvent.click(screen.getByText("Get the deposit address"))
     await screen.findByText(/Send exactly/)
     expect(net.calls.find((c) => c.method === "POST")!.body).toEqual({ receivePaymentId: ID, chainId: 8453 })
   })
@@ -163,10 +197,10 @@ describe("<PaystraterCheckout> for React Native", () => {
   })
 
   it.each([
-    [lockedTtp({ status: "succeeded" }), "Paid"],
+    [lockedTtp({ status: "succeeded" }), "Payment complete"],
     [lockedTtp({ status: "expired", transferToPay: { ...lockedTtp().transferToPay!, receivedAmount: "10" } }), "You sent less than the amount"],
     [payment({ status: "cancelled" }), "This payment was cancelled"],
-    [payment({ status: "processing" }), "Payment received, confirming"]
+    [payment({ status: "processing" }), "Payment received"]
   ])("shows the end state %#", async (p, heading) => {
     serve(() => ok(p))
     render(<PaystraterCheckout paymentId={ID} publishableKey={PK_TEST} />)

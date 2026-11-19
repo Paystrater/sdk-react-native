@@ -1,8 +1,10 @@
-// Size budget, checked in CI: under 40 KB of JavaScript,
-// minified, with react and react-native left out.
+// Size budget, checked in CI: under 44 KB of JavaScript,
+// minified, with react and react-native left out. Raised from 40 KB for the
+// design shared with the web (method tiles, the back row, Powered by); the
+// brand images are asset files and do not count.
 import { build } from "esbuild"
 
-const BUDGET = 40 * 1024
+const BUDGET = 44 * 1024
 const result = await build({
   entryPoints: ["src/index.ts"],
   bundle: true,
@@ -10,7 +12,8 @@ const result = await build({
   format: "esm",
   target: "es2020",
   platform: "neutral",
-  external: ["react", "react-native", "react/jsx-runtime"],
+  // Brand images are asset files, not JavaScript
+  external: ["react", "react-native", "react/jsx-runtime", "./assets/*"],
   jsx: "automatic",
   write: false,
   logLevel: "warning"

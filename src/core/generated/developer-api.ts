@@ -5,7 +5,7 @@
  */
 
 export interface paths {
-    "/v1/checkout/transfer-to-pay": {
+    "/checkout/transfer-to-pay": {
         parameters: {
             query?: never;
             header?: never;
@@ -18,7 +18,7 @@ export interface paths {
          * Pay by transfer
          * @description - **API key:** a public key (`pk_live_` or `pk_test_`), from a browser on the key's domain allowlist or from your app (a call without an `Origin` header). Never send a secret key here. Browsers can read `X-Paystrater-Encrypted` on the response.
          *     - **Scope needed on the API key:** `receive-crypto:create`, or `all-scopes`.
-         *     - **Rate limit:** 120 requests a minute per public key and customer IP, in production and the sandbox.
+         *     - **Rate limit:** 600 requests a minute per public key, customer IP and route, in production and the sandbox.
          *
          *     Starts Transfer to Pay for the customer. Call it when they pick Transfer to Pay and a chain. Show them the deposit address and the exact `totalAmount` to send before `expiresAt`. Asking again returns the same deposit. If the payment had no method, it becomes a `transfer_to_pay` payment.
          */
@@ -29,7 +29,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/checkout/pay-with-paystrater": {
+    "/checkout/pay-with-paystrater": {
         parameters: {
             query?: never;
             header?: never;
@@ -42,7 +42,7 @@ export interface paths {
          * Pay with Paystrater
          * @description - **API key:** a public key (`pk_live_` or `pk_test_`), from a browser on the key's domain allowlist or from your app (a call without an `Origin` header). Never send a secret key here. Browsers can read `X-Paystrater-Encrypted` on the response.
          *     - **Scope needed on the API key:** `receive-crypto:create`, or `all-scopes`.
-         *     - **Rate limit:** 120 requests a minute per public key and customer IP, in production and the sandbox.
+         *     - **Rate limit:** 600 requests a minute per public key, customer IP and route, in production and the sandbox.
          *
          *     Sends the payment to the customer's Paystrater app. Call it when they pick Pay with Paystrater and type their Paystrater ID or username. They approve it in the app, and the payment moves to `succeeded`. Asking again for the same account sends nothing new. If the payment had no method, it becomes a `pay_with_paystrater` payment.
          */
@@ -53,7 +53,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/checkout/agentic": {
+    "/checkout/agentic": {
         parameters: {
             query?: never;
             header?: never;
@@ -66,7 +66,7 @@ export interface paths {
          * Pay with an agent
          * @description - **API key:** a public key (`pk_live_` or `pk_test_`), from a browser on the key's domain allowlist or from your app (a call without an `Origin` header). Never send a secret key here. Browsers can read `X-Paystrater-Encrypted` on the response.
          *     - **Scope needed on the API key:** `receive-crypto:create`, or `all-scopes`.
-         *     - **Rate limit:** 120 requests a minute per public key and customer IP, in production and the sandbox.
+         *     - **Rate limit:** 600 requests a minute per public key, customer IP and route, in production and the sandbox.
          *
          *     Readies the payment for the customer's AI agent. Call it when they pick the agent option. Show them `agentPrompt` and `agenticIntent` to give to their agent. The agent pays with the intent before `expiresAt`. If the payment had no method, it becomes an `agentic` payment.
          */
@@ -77,7 +77,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/checkout/payments/{id}": {
+    "/checkout/payments/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -88,7 +88,7 @@ export interface paths {
          * Retrieve a checkout payment
          * @description - **API key:** a public key (`pk_live_` or `pk_test_`), from a browser on the key's domain allowlist or from your app (a call without an `Origin` header). Never send a secret key here. Browsers can read `X-Paystrater-Encrypted` on the response.
          *     - **Scope needed on the API key:** `receive-crypto:create`, or `all-scopes`.
-         *     - **Rate limit:** 120 requests a minute per public key and customer IP, in production and the sandbox.
+         *     - **Rate limit:** 60 requests a minute per payment, in production and the sandbox.
          *
          *     Retrieves a payment for your checkout page or the SDK. Call it when the customer opens checkout. Until the customer picks, `methods` lists the ways they can pay and `chains` the chains they can pay on. Show one button for each method. Call it again to follow the payment until `status` is final.
          */
@@ -101,7 +101,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/checkout/payments/{id}/refund-address": {
+    "/checkout/payments/{id}/refund-address": {
         parameters: {
             query?: never;
             header?: never;
@@ -114,7 +114,7 @@ export interface paths {
          * Confirm a refund address
          * @description - **API key:** a public key (`pk_live_` or `pk_test_`), from a browser on the key's domain allowlist or from your app (a call without an `Origin` header). Never send a secret key here. Browsers can read `X-Paystrater-Encrypted` on the response.
          *     - **Scope needed on the API key:** `receive-crypto:create`, or `all-scopes`.
-         *     - **Rate limit:** 120 requests a minute per public key and customer IP, in production and the sandbox.
+         *     - **Rate limit:** 600 requests a minute per public key, customer IP and route, in production and the sandbox.
          *
          *     Sends back a Transfer to Pay deposit that was too small to pay the order. Call it with the address the customer wants the money returned to, or with `useSavedAddress: true` and the code from the email to use the refund address they gave at checkout. Without the code from the customer's email, only the address the money came from can be confirmed.
          */
@@ -125,7 +125,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/receive-payments": {
+    "/receive-payments": {
         parameters: {
             query?: never;
             header?: never;
@@ -138,7 +138,7 @@ export interface paths {
          * Create a payment
          * @description - **API key:** a secret key (`sk_live_` or `sk_test_`), from your server only. A call with an `Origin` header is refused.
          *     - **Scope needed on the API key:** `receive-payments:write`, or `all-scopes`.
-         *     - **Rate limit:** None in production. In the sandbox (test keys), 25 requests a second per account, shared by every route.
+         *     - **Rate limit:** 300 requests a second per account in production, shared by every route; Paystrater can raise it for your account. In the sandbox (test keys), 25 requests a second per account, shared by every route.
          *
          *     Creates a payment you want to receive. Pick how the customer pays:
          *
@@ -146,7 +146,7 @@ export interface paths {
          *     - **SDK or your own checkout**: leave out `method`. Pass the payment's `id` to the SDK, or to your page, which calls the Checkout routes with your public key. The customer picks a method there.
          *     - **Your server only**: set `method` yourself and show the customer what to do.
          *
-         *     In every case, confirm the payment with a webhook event or `GET /v1/incoming-payments/{id}` before you deliver the order.
+         *     In every case, confirm the payment with a webhook event or `GET /incoming-payments/{id}` before you deliver the order.
          */
         post: operations["createReceivePayment"];
         delete?: never;
@@ -155,7 +155,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/incoming-payments": {
+    "/incoming-payments": {
         parameters: {
             query?: never;
             header?: never;
@@ -166,7 +166,7 @@ export interface paths {
          * List payments
          * @description - **API key:** a secret key (`sk_live_` or `sk_test_`), from your server only. A call with an `Origin` header is refused.
          *     - **Scope needed on the API key:** `receive-payments:read`, or `all-scopes`.
-         *     - **Rate limit:** None in production. In the sandbox (test keys), 25 requests a second per account, shared by every route, and list reads at most 10 a second.
+         *     - **Rate limit:** 300 requests a second per account in production, shared by every route; Paystrater can raise it for your account. In the sandbox (test keys), 25 requests a second per account, shared by every route, and list reads at most 10 a second.
          *
          *     Lists the payments you asked to receive, newest first. Filter by `status`, and pass `nextCursor` as `cursor` for the next page.
          */
@@ -179,7 +179,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/incoming-payments/{id}": {
+    "/incoming-payments/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -190,7 +190,7 @@ export interface paths {
          * Retrieve a payment
          * @description - **API key:** a secret key (`sk_live_` or `sk_test_`), from your server only. A call with an `Origin` header is refused.
          *     - **Scope needed on the API key:** `receive-payments:read`, or `all-scopes`.
-         *     - **Rate limit:** None in production. In the sandbox (test keys), 25 requests a second per account, shared by every route.
+         *     - **Rate limit:** 300 requests a second per account in production, shared by every route; Paystrater can raise it for your account. In the sandbox (test keys), 25 requests a second per account, shared by every route.
          *
          *     Retrieves one payment you asked to receive. Check `status` before you deliver an order.
          */
@@ -203,7 +203,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/incoming-payments/{id}/cancel": {
+    "/incoming-payments/{id}/cancel": {
         parameters: {
             query?: never;
             header?: never;
@@ -216,7 +216,7 @@ export interface paths {
          * Cancel a payment
          * @description - **API key:** a secret key (`sk_live_` or `sk_test_`), from your server only. A call with an `Origin` header is refused.
          *     - **Scope needed on the API key:** `receive-payments:write`, or `all-scopes`.
-         *     - **Rate limit:** None in production. In the sandbox (test keys), 25 requests a second per account, shared by every route.
+         *     - **Rate limit:** 300 requests a second per account in production, shared by every route; Paystrater can raise it for your account. In the sandbox (test keys), 25 requests a second per account, shared by every route.
          *
          *     Cancels a payment nobody has started paying. After this it can no longer be paid, and `status` is `cancelled`.
          */
@@ -227,7 +227,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/payment-settings": {
+    "/payment-settings": {
         parameters: {
             query?: never;
             header?: never;
@@ -238,7 +238,7 @@ export interface paths {
          * Retrieve payment settings
          * @description - **API key:** a secret key (`sk_live_` or `sk_test_`), from your server only. A call with an `Origin` header is refused.
          *     - **Scope needed on the API key:** `receive-payments:read`, or `all-scopes`.
-         *     - **Rate limit:** None in production. In the sandbox (test keys), 25 requests a second per account, shared by every route.
+         *     - **Rate limit:** 300 requests a second per account in production, shared by every route; Paystrater can raise it for your account. In the sandbox (test keys), 25 requests a second per account, shared by every route.
          *
          *     Retrieves the chains and tokens you accept, and who pays the fee. You change them in the dashboard.
          */
@@ -251,7 +251,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/send-payments/quote": {
+    "/send-payments/quote": {
         parameters: {
             query?: never;
             header?: never;
@@ -264,9 +264,9 @@ export interface paths {
          * Price a payout
          * @description - **API key:** a secret key (`sk_live_` or `sk_test_`), from your server only. A call with an `Origin` header is refused.
          *     - **Scope needed on the API key:** `transaction:write` or `bulk-transaction:write`, or `all-scopes`.
-         *     - **Rate limit:** None in production. In the sandbox (test keys), 25 requests a second per account, shared by every route.
+         *     - **Rate limit:** 300 requests a second per account in production, shared by every route; Paystrater can raise it for your account. In the sandbox (test keys), 25 requests a second per account, shared by every route.
          *
-         *     Prices a payout without sending it. Show `total` to whoever approves the payout, then send the same body to `POST /v1/send-payments`.
+         *     Prices a payout without sending it. Show `total` to whoever approves the payout, then send the same body to `POST /send-payments`.
          */
         post: operations["quoteSendPayment"];
         delete?: never;
@@ -275,7 +275,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/send-payments": {
+    "/send-payments": {
         parameters: {
             query?: never;
             header?: never;
@@ -289,9 +289,9 @@ export interface paths {
          * @description - **API key:** a secret key (`sk_live_` or `sk_test_`), from your server only. A call with an `Origin` header is refused.
          *     - **Scope needed on the API key:** `transaction:write` or `bulk-transaction:write` to pay one receiver; `bulk-transaction:write` to pay two or more. `all-scopes` does not count, because this route moves money.
          *     - **IP allowlist:** required. This route moves money, so the API key needs at least one allowed IP address, and the call must come from one of them.
-         *     - **Rate limit:** None in production. In the sandbox (test keys), 25 requests a second per account, shared by every route.
+         *     - **Rate limit:** 300 requests a second per account in production, shared by every route; Paystrater can raise it for your account. In the sandbox (test keys), 25 requests a second per account, shared by every route.
          *
-         *     Sends money from your wallet to 1 to 300 receivers (at most 14 on Solana) in one atomic transfer: every receiver is paid, or none is, and nothing is recorded for a payout that is refused. Each receiver is a Paystrater account (by `accountNumber`, the Paystrater ID, or `username`) or a wallet address (`address`). A payout pays either Paystrater accounts or wallet addresses, never both. `accountNumber` and `username` receivers can be mixed (both are Paystrater accounts), but a payout with an `address` receiver must have only `address` receivers. Send accounts and addresses as two payouts. Follow it with `GET /v1/outgoing-payments/{id}` or the payout webhook events.
+         *     Sends money from your wallet to 1 to 300 receivers (at most 14 on Solana) in one atomic transfer: every receiver is paid, or none is, and nothing is recorded for a payout that is refused. Each receiver is a Paystrater account (by `accountNumber`, the Paystrater ID, or `username`) or a wallet address (`address`). A payout pays either Paystrater accounts or wallet addresses, never both. `accountNumber` and `username` receivers can be mixed (both are Paystrater accounts), but a payout with an `address` receiver must have only `address` receivers. Send accounts and addresses as two payouts. Follow it with `GET /outgoing-payments/{id}` or the payout webhook events.
          */
         post: operations["createSendPayment"];
         delete?: never;
@@ -300,7 +300,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/outgoing-payments": {
+    "/outgoing-payments": {
         parameters: {
             query?: never;
             header?: never;
@@ -311,7 +311,7 @@ export interface paths {
          * List payouts
          * @description - **API key:** a secret key (`sk_live_` or `sk_test_`), from your server only. A call with an `Origin` header is refused.
          *     - **Scope needed on the API key:** `transaction:read`, or `all-scopes`.
-         *     - **Rate limit:** None in production. In the sandbox (test keys), 25 requests a second per account, shared by every route, and list reads at most 10 a second.
+         *     - **Rate limit:** 300 requests a second per account in production, shared by every route; Paystrater can raise it for your account. In the sandbox (test keys), 25 requests a second per account, shared by every route, and list reads at most 10 a second.
          *
          *     Lists your payouts, newest first. Pass `nextCursor` as `cursor` for the next page.
          */
@@ -324,7 +324,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/outgoing-payments/{id}": {
+    "/outgoing-payments/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -335,7 +335,7 @@ export interface paths {
          * Retrieve a payout
          * @description - **API key:** a secret key (`sk_live_` or `sk_test_`), from your server only. A call with an `Origin` header is refused.
          *     - **Scope needed on the API key:** `transaction:read`, or `all-scopes`.
-         *     - **Rate limit:** None in production. In the sandbox (test keys), 25 requests a second per account, shared by every route.
+         *     - **Rate limit:** 300 requests a second per account in production, shared by every route; Paystrater can raise it for your account. In the sandbox (test keys), 25 requests a second per account, shared by every route.
          *
          *     Retrieves one payout and how each receiver's part went.
          */
@@ -348,7 +348,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/refunds": {
+    "/refunds": {
         parameters: {
             query?: never;
             header?: never;
@@ -359,7 +359,7 @@ export interface paths {
          * List refunds
          * @description - **API key:** a secret key (`sk_live_` or `sk_test_`), from your server only. A call with an `Origin` header is refused.
          *     - **Scope needed on the API key:** `refunds:read`, or `all-scopes`.
-         *     - **Rate limit:** None in production. In the sandbox (test keys), 25 requests a second per account, shared by every route, and list reads at most 10 a second.
+         *     - **Rate limit:** 300 requests a second per account in production, shared by every route; Paystrater can raise it for your account. In the sandbox (test keys), 25 requests a second per account, shared by every route, and list reads at most 10 a second.
          *
          *     Lists your refunds, newest first. Filter by `receivePaymentId`, and pass `nextCursor` as `cursor` for the next page.
          */
@@ -370,7 +370,7 @@ export interface paths {
          * @description - **API key:** a secret key (`sk_live_` or `sk_test_`), from your server only. A call with an `Origin` header is refused.
          *     - **Scope needed on the API key:** `refunds:write`. `all-scopes` does not count, because this route moves money.
          *     - **IP allowlist:** required. This route moves money, so the API key needs at least one allowed IP address, and the call must come from one of them.
-         *     - **Rate limit:** None in production. In the sandbox (test keys), 25 requests a second per account, shared by every route.
+         *     - **Rate limit:** 300 requests a second per account in production, shared by every route; Paystrater can raise it for your account. In the sandbox (test keys), 25 requests a second per account, shared by every route.
          *
          *     Sends money back to the customer for a payment you received. Leave out `amount` to refund all that is left. The money leaves your wallet on the payment's chain.
          */
@@ -381,7 +381,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/refunds/{id}": {
+    "/refunds/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -392,7 +392,7 @@ export interface paths {
          * Retrieve a refund
          * @description - **API key:** a secret key (`sk_live_` or `sk_test_`), from your server only. A call with an `Origin` header is refused.
          *     - **Scope needed on the API key:** `refunds:read`, or `all-scopes`.
-         *     - **Rate limit:** None in production. In the sandbox (test keys), 25 requests a second per account, shared by every route.
+         *     - **Rate limit:** 300 requests a second per account in production, shared by every route; Paystrater can raise it for your account. In the sandbox (test keys), 25 requests a second per account, shared by every route.
          *
          *     Retrieves one refund.
          */
@@ -405,7 +405,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/swaps": {
+    "/swaps": {
         parameters: {
             query?: never;
             header?: never;
@@ -419,9 +419,9 @@ export interface paths {
          * @description - **API key:** a secret key (`sk_live_` or `sk_test_`), from your server only. A call with an `Origin` header is refused.
          *     - **Scope needed on the API key:** `swaps:write`. `all-scopes` does not count, because this route moves money.
          *     - **IP allowlist:** required. This route moves money, so the API key needs at least one allowed IP address, and the call must come from one of them.
-         *     - **Rate limit:** None in production. In the sandbox (test keys), 25 requests a second per account, shared by every route.
+         *     - **Rate limit:** 300 requests a second per account in production, shared by every route; Paystrater can raise it for your account. In the sandbox (test keys), 25 requests a second per account, shared by every route.
          *
-         *     Swaps one token for another in your wallet, on one chain or across two. Follow it with `GET /v1/transactions/{id}` or the swap webhook events.
+         *     Swaps one token for another in your wallet, on one chain or across two. Follow it with `GET /transactions/{id}` or the swap webhook events.
          */
         post: operations["createSwap"];
         delete?: never;
@@ -430,7 +430,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/balances": {
+    "/balances": {
         parameters: {
             query?: never;
             header?: never;
@@ -441,7 +441,7 @@ export interface paths {
          * List balances
          * @description - **API key:** a secret key (`sk_live_` or `sk_test_`), from your server only. A call with an `Origin` header is refused.
          *     - **Scope needed on the API key:** `transaction:read`, or `all-scopes`.
-         *     - **Rate limit:** None in production. In the sandbox (test keys), 25 requests a second per account, shared by every route.
+         *     - **Rate limit:** 300 requests a second per account in production, shared by every route; Paystrater can raise it for your account. In the sandbox (test keys), 25 requests a second per account, shared by every route.
          *
          *     Lists what your wallet holds on one chain, pinned tokens first.
          */
@@ -454,7 +454,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/transactions/{id}": {
+    "/transactions/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -465,7 +465,7 @@ export interface paths {
          * Retrieve any transaction
          * @description - **API key:** a secret key (`sk_live_` or `sk_test_`), from your server only. A call with an `Origin` header is refused.
          *     - **Scope needed on the API key:** `transaction:read` or `receive-payments:read`, or `all-scopes`.
-         *     - **Rate limit:** None in production. In the sandbox (test keys), 25 requests a second per account, shared by every route, and a call with `waitSeconds` holds one of 20 long-poll slots for the account; when all 20 are busy, it gets 429 with `Retry-After: 1`.
+         *     - **Rate limit:** 300 requests a second per account in production, shared by every route; Paystrater can raise it for your account. In the sandbox (test keys), 25 requests a second per account, shared by every route, and a call with `waitSeconds` holds one of 20 long-poll slots for the account; when all 20 are busy, it gets 429 with `Retry-After: 1`.
          *
          *     Retrieves any of your payments, payouts, refunds or swaps by its ID. Set `waitSeconds` to wait up to 25 seconds for it to finish, instead of asking again and again.
          */
@@ -478,7 +478,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/agentic/intents": {
+    "/agentic/intents": {
         parameters: {
             query?: never;
             header?: never;
@@ -491,9 +491,9 @@ export interface paths {
          * Create an agentic intent
          * @description - **API key:** a secret key (`sk_live_` or `sk_test_`), from your server only. A call with an `Origin` header is refused.
          *     - **Scope needed on the API key:** `agentic:write`, or `all-scopes`.
-         *     - **Rate limit:** None in production. In the sandbox (test keys), 25 requests a second per account, shared by every route.
+         *     - **Rate limit:** 300 requests a second per account in production, shared by every route; Paystrater can raise it for your account. In the sandbox (test keys), 25 requests a second per account, shared by every route.
          *
-         *     Creates a payment an AI agent can pay. The response has `agenticIntent`, a signed note of exactly what to pay, and `agentPrompt`, an instruction to give the agent. The method is always `agentic`, so the body has no `method`, `payer` or `checkoutPage`, and the response has no `transferToPay`: that belongs to Transfer to Pay payments only. Sending another `method` gets a 400; use `POST /v1/receive-payments` for those.
+         *     Creates a payment an AI agent can pay. The response has `agenticIntent`, a signed note of exactly what to pay, and `agentPrompt`, an instruction to give the agent. The method is always `agentic`, so the body has no `method`, `payer` or `checkoutPage`, and the response has no `transferToPay`: that belongs to Transfer to Pay payments only. Sending another `method` gets a 400; use `POST /receive-payments` for those.
          */
         post: operations["createAgenticIntent"];
         delete?: never;
@@ -502,7 +502,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/agentic/resolve": {
+    "/agentic/resolve": {
         parameters: {
             query?: never;
             header?: never;
@@ -515,7 +515,7 @@ export interface paths {
          * Check an agentic intent
          * @description - **API key:** a secret key (`sk_live_` or `sk_test_`), from your server only. A call with an `Origin` header is refused.
          *     - **Scope needed on the API key:** `agentic:write`, or `all-scopes`.
-         *     - **Rate limit:** None in production. In the sandbox (test keys), 25 requests a second per account, shared by every route.
+         *     - **Rate limit:** 300 requests a second per account in production, shared by every route; Paystrater can raise it for your account. In the sandbox (test keys), 25 requests a second per account, shared by every route.
          *
          *     Checks that an intent is signed by Paystrater and not expired, and returns the payment it asks for. An agent calls it to learn exactly what to pay.
          */
@@ -526,7 +526,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/schedule-payments": {
+    "/schedule-payments": {
         parameters: {
             query?: never;
             header?: never;
@@ -540,7 +540,7 @@ export interface paths {
          * @description - **API key:** a secret key (`sk_live_` or `sk_test_`), from your server only. A call with an `Origin` header is refused.
          *     - **Scope needed on the API key:** `transaction:write` or `bulk-transaction:write` to pay one receiver; `bulk-transaction:write` to pay two or more. `all-scopes` does not count, because this route moves money.
          *     - **IP allowlist:** required. This route moves money, so the API key needs at least one allowed IP address, and the call must come from one of them.
-         *     - **Rate limit:** None in production. In the sandbox (test keys), 25 requests a second per account, shared by every route.
+         *     - **Rate limit:** 300 requests a second per account in production, shared by every route; Paystrater can raise it for your account. In the sandbox (test keys), 25 requests a second per account, shared by every route.
          *
          *     Schedules a payment from your wallet that repeats, such as a monthly salary. Each cycle pays every receiver their amount. Each cycle is one atomic transfer to 1 to 300 receivers (at most 14 on Solana): every receiver is paid, or none is. A schedule pays either Paystrater accounts (`accountNumber`, the Paystrater ID, or `username`) or wallet addresses, never both.
          */
@@ -551,7 +551,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/scheduled-payments": {
+    "/scheduled-payments": {
         parameters: {
             query?: never;
             header?: never;
@@ -562,7 +562,7 @@ export interface paths {
          * List scheduled payments
          * @description - **API key:** a secret key (`sk_live_` or `sk_test_`), from your server only. A call with an `Origin` header is refused.
          *     - **Scope needed on the API key:** `transaction:read`, or `all-scopes`.
-         *     - **Rate limit:** None in production. In the sandbox (test keys), 25 requests a second per account, shared by every route, and list reads at most 10 a second.
+         *     - **Rate limit:** 300 requests a second per account in production, shared by every route; Paystrater can raise it for your account. In the sandbox (test keys), 25 requests a second per account, shared by every route, and list reads at most 10 a second.
          *
          *     Lists your scheduled payments, newest first. Filter by `status`, and pass `nextCursor` as `cursor` for the next page.
          */
@@ -575,7 +575,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/scheduled-payments/{id}": {
+    "/scheduled-payments/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -586,7 +586,7 @@ export interface paths {
          * Retrieve a scheduled payment
          * @description - **API key:** a secret key (`sk_live_` or `sk_test_`), from your server only. A call with an `Origin` header is refused.
          *     - **Scope needed on the API key:** `transaction:read`, or `all-scopes`.
-         *     - **Rate limit:** None in production. In the sandbox (test keys), 25 requests a second per account, shared by every route.
+         *     - **Rate limit:** 300 requests a second per account in production, shared by every route; Paystrater can raise it for your account. In the sandbox (test keys), 25 requests a second per account, shared by every route.
          *
          *     Retrieves one scheduled payment and its last cycle.
          */
@@ -599,7 +599,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/scheduled-payments/{id}/runs": {
+    "/scheduled-payments/{id}/runs": {
         parameters: {
             query?: never;
             header?: never;
@@ -610,7 +610,7 @@ export interface paths {
          * List scheduled payment cycles
          * @description - **API key:** a secret key (`sk_live_` or `sk_test_`), from your server only. A call with an `Origin` header is refused.
          *     - **Scope needed on the API key:** `transaction:read`, or `all-scopes`.
-         *     - **Rate limit:** None in production. In the sandbox (test keys), 25 requests a second per account, shared by every route, and list reads at most 10 a second.
+         *     - **Rate limit:** 300 requests a second per account in production, shared by every route; Paystrater can raise it for your account. In the sandbox (test keys), 25 requests a second per account, shared by every route, and list reads at most 10 a second.
          *
          *     Lists the latest cycles of a scheduled payment, newest first.
          */
@@ -623,7 +623,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/scheduled-payments/{id}/cancel": {
+    "/scheduled-payments/{id}/cancel": {
         parameters: {
             query?: never;
             header?: never;
@@ -636,7 +636,7 @@ export interface paths {
          * Cancel a scheduled payment
          * @description - **API key:** a secret key (`sk_live_` or `sk_test_`), from your server only. A call with an `Origin` header is refused.
          *     - **Scope needed on the API key:** `transaction:write` or `bulk-transaction:write`, or `all-scopes`.
-         *     - **Rate limit:** None in production. In the sandbox (test keys), 25 requests a second per account, shared by every route.
+         *     - **Rate limit:** 300 requests a second per account in production, shared by every route; Paystrater can raise it for your account. In the sandbox (test keys), 25 requests a second per account, shared by every route.
          *
          *     Stops a scheduled payment for good. No cycle runs after this.
          */
@@ -647,7 +647,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/scheduled-payments/{id}/pause": {
+    "/scheduled-payments/{id}/pause": {
         parameters: {
             query?: never;
             header?: never;
@@ -660,7 +660,7 @@ export interface paths {
          * Pause a scheduled payment
          * @description - **API key:** a secret key (`sk_live_` or `sk_test_`), from your server only. A call with an `Origin` header is refused.
          *     - **Scope needed on the API key:** `transaction:write` or `bulk-transaction:write`, or `all-scopes`.
-         *     - **Rate limit:** None in production. In the sandbox (test keys), 25 requests a second per account, shared by every route.
+         *     - **Rate limit:** 300 requests a second per account in production, shared by every route; Paystrater can raise it for your account. In the sandbox (test keys), 25 requests a second per account, shared by every route.
          *
          *     Pauses a scheduled payment. Cycles due while it is paused are skipped.
          */
@@ -671,7 +671,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/scheduled-payments/{id}/resume": {
+    "/scheduled-payments/{id}/resume": {
         parameters: {
             query?: never;
             header?: never;
@@ -685,7 +685,7 @@ export interface paths {
          * @description - **API key:** a secret key (`sk_live_` or `sk_test_`), from your server only. A call with an `Origin` header is refused.
          *     - **Scope needed on the API key:** `transaction:write` or `bulk-transaction:write` when the schedule pays one receiver; `bulk-transaction:write` when it pays two or more, as creating it did. `all-scopes` does not count, because this route moves money.
          *     - **IP allowlist:** required. This route moves money, so the API key needs at least one allowed IP address, and the call must come from one of them.
-         *     - **Rate limit:** None in production. In the sandbox (test keys), 25 requests a second per account, shared by every route.
+         *     - **Rate limit:** 300 requests a second per account in production, shared by every route; Paystrater can raise it for your account. In the sandbox (test keys), 25 requests a second per account, shared by every route.
          *
          *     Resumes a paused scheduled payment from its next cycle.
          */
@@ -696,7 +696,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/subscriptions": {
+    "/subscriptions": {
         parameters: {
             query?: never;
             header?: never;
@@ -707,7 +707,7 @@ export interface paths {
          * List subscriptions
          * @description - **API key:** a secret key (`sk_live_` or `sk_test_`), from your server only. A call with an `Origin` header is refused.
          *     - **Scope needed on the API key:** `subscriptions:read`, or `all-scopes`.
-         *     - **Rate limit:** None in production. In the sandbox (test keys), 25 requests a second per account, shared by every route, and list reads at most 10 a second.
+         *     - **Rate limit:** 300 requests a second per account in production, shared by every route; Paystrater can raise it for your account. In the sandbox (test keys), 25 requests a second per account, shared by every route, and list reads at most 10 a second.
          *
          *     Lists the subscriptions you bill, newest first. Filter by `status`, and pass `nextCursor` as `cursor` for the next page.
          */
@@ -717,9 +717,9 @@ export interface paths {
          * Create a subscription
          * @description - **API key:** a secret key (`sk_live_` or `sk_test_`), from your server only. A call with an `Origin` header is refused.
          *     - **Scope needed on the API key:** `subscriptions:write`, or `all-scopes`.
-         *     - **Rate limit:** None in production. In the sandbox (test keys), 25 requests a second per account, shared by every route.
+         *     - **Rate limit:** 300 requests a second per account in production, shared by every route; Paystrater can raise it for your account. In the sandbox (test keys), 25 requests a second per account, shared by every route.
          *
-         *     Asks a customer to subscribe. They approve it in their Paystrater app, and `status` moves from `pending_approval` to `active`. Name a plan with `planId` (the `id` from `POST /v1/plans`), or give the price yourself with `amount`, `tokenTicker` and `frequency`; not both. A plan is the reusable price, and a subscription is one customer agreeing to pay it.
+         *     Asks a customer to subscribe. They approve it in their Paystrater app, and `status` moves from `pending_approval` to `active`. Name a plan with `planId` (the `id` from `POST /plans`), or give the price yourself with `amount`, `tokenTicker` and `frequency`; not both. A plan is the reusable price, and a subscription is one customer agreeing to pay it.
          */
         post: operations["createSubscription"];
         delete?: never;
@@ -728,7 +728,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/subscriptions/{id}": {
+    "/subscriptions/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -739,7 +739,7 @@ export interface paths {
          * Retrieve a subscription
          * @description - **API key:** a secret key (`sk_live_` or `sk_test_`), from your server only. A call with an `Origin` header is refused.
          *     - **Scope needed on the API key:** `subscriptions:read`, or `all-scopes`.
-         *     - **Rate limit:** None in production. In the sandbox (test keys), 25 requests a second per account, shared by every route.
+         *     - **Rate limit:** 300 requests a second per account in production, shared by every route; Paystrater can raise it for your account. In the sandbox (test keys), 25 requests a second per account, shared by every route.
          *
          *     Retrieves one subscription and its last charge.
          */
@@ -752,7 +752,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/subscriptions/{id}/runs": {
+    "/subscriptions/{id}/runs": {
         parameters: {
             query?: never;
             header?: never;
@@ -763,7 +763,7 @@ export interface paths {
          * List subscription charges
          * @description - **API key:** a secret key (`sk_live_` or `sk_test_`), from your server only. A call with an `Origin` header is refused.
          *     - **Scope needed on the API key:** `subscriptions:read`, or `all-scopes`.
-         *     - **Rate limit:** None in production. In the sandbox (test keys), 25 requests a second per account, shared by every route, and list reads at most 10 a second.
+         *     - **Rate limit:** 300 requests a second per account in production, shared by every route; Paystrater can raise it for your account. In the sandbox (test keys), 25 requests a second per account, shared by every route, and list reads at most 10 a second.
          *
          *     Lists the latest charges of a subscription, newest first.
          */
@@ -776,7 +776,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/subscriptions/{id}/cancel": {
+    "/subscriptions/{id}/cancel": {
         parameters: {
             query?: never;
             header?: never;
@@ -789,7 +789,7 @@ export interface paths {
          * Cancel a subscription
          * @description - **API key:** a secret key (`sk_live_` or `sk_test_`), from your server only. A call with an `Origin` header is refused.
          *     - **Scope needed on the API key:** `subscriptions:write`, or `all-scopes`.
-         *     - **Rate limit:** None in production. In the sandbox (test keys), 25 requests a second per account, shared by every route.
+         *     - **Rate limit:** 300 requests a second per account in production, shared by every route; Paystrater can raise it for your account. In the sandbox (test keys), 25 requests a second per account, shared by every route.
          *
          *     Cancels a subscription now, or at the end of the period the customer already paid for with `atPeriodEnd: true`.
          */
@@ -800,7 +800,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/subscriptions/{id}/pause": {
+    "/subscriptions/{id}/pause": {
         parameters: {
             query?: never;
             header?: never;
@@ -813,7 +813,7 @@ export interface paths {
          * Pause a subscription
          * @description - **API key:** a secret key (`sk_live_` or `sk_test_`), from your server only. A call with an `Origin` header is refused.
          *     - **Scope needed on the API key:** `subscriptions:write`, or `all-scopes`.
-         *     - **Rate limit:** None in production. In the sandbox (test keys), 25 requests a second per account, shared by every route.
+         *     - **Rate limit:** 300 requests a second per account in production, shared by every route; Paystrater can raise it for your account. In the sandbox (test keys), 25 requests a second per account, shared by every route.
          *
          *     Pauses a subscription. Nothing is charged until you resume it.
          */
@@ -824,7 +824,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/subscriptions/{id}/resume": {
+    "/subscriptions/{id}/resume": {
         parameters: {
             query?: never;
             header?: never;
@@ -837,7 +837,7 @@ export interface paths {
          * Resume a subscription
          * @description - **API key:** a secret key (`sk_live_` or `sk_test_`), from your server only. A call with an `Origin` header is refused.
          *     - **Scope needed on the API key:** `subscriptions:write`, or `all-scopes`.
-         *     - **Rate limit:** None in production. In the sandbox (test keys), 25 requests a second per account, shared by every route.
+         *     - **Rate limit:** 300 requests a second per account in production, shared by every route; Paystrater can raise it for your account. In the sandbox (test keys), 25 requests a second per account, shared by every route.
          *
          *     Resumes a paused subscription from its next charge.
          */
@@ -848,7 +848,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/plans": {
+    "/plans": {
         parameters: {
             query?: never;
             header?: never;
@@ -859,7 +859,7 @@ export interface paths {
          * List plans
          * @description - **API key:** a secret key (`sk_live_` or `sk_test_`), from your server only. A call with an `Origin` header is refused.
          *     - **Scope needed on the API key:** `subscriptions:read`, or `all-scopes`.
-         *     - **Rate limit:** None in production. In the sandbox (test keys), 25 requests a second per account, shared by every route, and list reads at most 10 a second.
+         *     - **Rate limit:** 300 requests a second per account in production, shared by every route; Paystrater can raise it for your account. In the sandbox (test keys), 25 requests a second per account, shared by every route, and list reads at most 10 a second.
          *
          *     Lists your plans.
          */
@@ -869,9 +869,9 @@ export interface paths {
          * Create a plan
          * @description - **API key:** a secret key (`sk_live_` or `sk_test_`), from your server only. A call with an `Origin` header is refused.
          *     - **Scope needed on the API key:** `subscriptions:write`, or `all-scopes`.
-         *     - **Rate limit:** None in production. In the sandbox (test keys), 25 requests a second per account, shared by every route.
+         *     - **Rate limit:** 300 requests a second per account in production, shared by every route; Paystrater can raise it for your account. In the sandbox (test keys), 25 requests a second per account, shared by every route.
          *
-         *     Creates a price you charge again and again, such as 9.99 USDC a month. It charges nobody by itself. Paystrater makes the plan's ID and returns it as `id` (`plan_` followed by 24 letters and digits). Pass that `id` as `planId` to `POST /v1/subscriptions` to bill a customer on this plan. A retry with the same `Idempotency-Key` returns the same plan.
+         *     Creates a price you charge again and again, such as 9.99 USDC a month. It charges nobody by itself. Paystrater makes the plan's ID and returns it as `id` (`plan_` followed by 24 letters and digits). Pass that `id` as `planId` to `POST /subscriptions` to bill a customer on this plan. A retry with the same `Idempotency-Key` returns the same plan.
          */
         post: operations["createPlan"];
         delete?: never;
@@ -880,7 +880,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/plans/{id}/archive": {
+    "/plans/{id}/archive": {
         parameters: {
             query?: never;
             header?: never;
@@ -893,7 +893,7 @@ export interface paths {
          * Archive a plan
          * @description - **API key:** a secret key (`sk_live_` or `sk_test_`), from your server only. A call with an `Origin` header is refused.
          *     - **Scope needed on the API key:** `subscriptions:write`, or `all-scopes`.
-         *     - **Rate limit:** None in production. In the sandbox (test keys), 25 requests a second per account, shared by every route.
+         *     - **Rate limit:** 300 requests a second per account in production, shared by every route; Paystrater can raise it for your account. In the sandbox (test keys), 25 requests a second per account, shared by every route.
          *
          *     Retires a plan so new subscriptions cannot use it. Subscriptions already on it keep going.
          */
@@ -915,7 +915,7 @@ export interface paths {
          * Retrieve Paystrater status
          * @description - **API key:** none needed. This route is public.
          *     - **Scope needed on the API key:** none.
-         *     - **Rate limit:** 60 requests a minute per IP address.
+         *     - **Rate limit:** none in the service. In front of it, 300 requests a minute per IP address.
          *
          *     Retrieves whether Paystrater is working now, uptime by day and recent incidents.
          *
@@ -1494,7 +1494,7 @@ export interface components {
         AcceptedAsset: {
             /**
              * Format: int64
-             * @description The blockchain, by its chain ID. For example `8453` is Base, `137` is Polygon and `56` is BNB Smart Chain. `GET /v1/payment-settings` lists the chains you accept.
+             * @description The blockchain, by its chain ID. For example `8453` is Base, `137` is Polygon and `56` is BNB Smart Chain. `GET /payment-settings` lists the chains you accept.
              * @example 8453
              */
             chainId: number;
@@ -1635,7 +1635,7 @@ export interface components {
              */
             netAmount?: string;
             /**
-             * @description The ID of the money movement that paid it. Set once the customer pays. Read it with `GET /v1/transactions/{id}`.
+             * @description The ID of the money movement that paid it. Set once the customer pays. Read it with `GET /transactions/{id}`.
              * @example 7m2n9p4q1r8s5t0u3v6w9x2y
              */
             transactionId?: string;
@@ -1716,7 +1716,7 @@ export interface components {
         Balance: {
             /**
              * Format: int64
-             * @description The blockchain, by its chain ID. For example `8453` is Base, `137` is Polygon and `56` is BNB Smart Chain. `GET /v1/payment-settings` lists the chains you accept.
+             * @description The blockchain, by its chain ID. For example `8453` is Base, `137` is Polygon and `56` is BNB Smart Chain. `GET /payment-settings` lists the chains you accept.
              * @example 8453
              */
             chainId: number;
@@ -1769,7 +1769,7 @@ export interface components {
         ChainOption: {
             /**
              * Format: int64
-             * @description The blockchain, by its chain ID. For example `8453` is Base, `137` is Polygon and `56` is BNB Smart Chain. `GET /v1/payment-settings` lists the chains you accept.
+             * @description The blockchain, by its chain ID. For example `8453` is Base, `137` is Polygon and `56` is BNB Smart Chain. `GET /payment-settings` lists the chains you accept.
              * @example 8453
              */
             chainId: number;
@@ -2076,7 +2076,7 @@ export interface components {
              */
             payer: string;
             /**
-             * @description Optional. The `id` of an active plan, as `POST /v1/plans` returned it, such as `plan_6g9h2j5k8l1m4n7p0q3r6s9t`. Paystrater makes plan IDs; there is no format for you to follow. The subscription copies the plan's price. Leave it out to give the price yourself with `amount`, `tokenTicker` and `frequency`; sending both gets a 400.
+             * @description Optional. The `id` of an active plan, as `POST /plans` returned it, such as `plan_6g9h2j5k8l1m4n7p0q3r6s9t`. Paystrater makes plan IDs; there is no format for you to follow. The subscription copies the plan's price. Leave it out to give the price yourself with `amount`, `tokenTicker` and `frequency`; sending both gets a 400.
              * @example plan_6g9h2j5k8l1m4n7p0q3r6s9t
              */
             planId?: string;
@@ -2568,7 +2568,7 @@ export interface components {
         PinnedToken: {
             /**
              * Format: int64
-             * @description The blockchain, by its chain ID. For example `8453` is Base, `137` is Polygon and `56` is BNB Smart Chain. `GET /v1/payment-settings` lists the chains you accept.
+             * @description The blockchain, by its chain ID. For example `8453` is Base, `137` is Polygon and `56` is BNB Smart Chain. `GET /payment-settings` lists the chains you accept.
              * @example 8453
              */
             chainId: number;
@@ -2595,7 +2595,7 @@ export interface components {
          */
         Plan: {
             /**
-             * @description Unique identifier for the plan, made by Paystrater when you create it. Starts with `plan_`. Pass it as `planId` to `POST /v1/subscriptions`.
+             * @description Unique identifier for the plan, made by Paystrater when you create it. Starts with `plan_`. Pass it as `planId` to `POST /subscriptions`.
              * @example plan_6g9h2j5k8l1m4n7p0q3r6s9t
              */
             id: string;
@@ -2789,13 +2789,13 @@ export interface components {
          *       "metadata": {
          *         "orderId": "ORD-10293"
          *       },
-         *       "checkoutUrl": "https://checkout.paystrater.com/pay/rcv_8f3k2m9q4x7v1b6n5c0z2w4e#key=pk_live_51Hc8xT2eZvKYlo2C",
+         *       "checkoutUrl": "https://app.paystrater.com/pay/rcv_8f3k2m9q4x7v1b6n5c0z2w4e#key=pk_test_51Hc8xT2eZvKYlo2C",
          *       "successUrl": "https://shop.example.com/orders/10293/thanks",
          *       "cancelUrl": "https://shop.example.com/cart",
          *       "expiresAt": "2026-10-30T09:35:00.000Z",
          *       "createdAt": "2026-10-30T09:15:00.000Z",
          *       "completedAt": "2026-10-30T09:18:42.000Z",
-         *       "livemode": true
+         *       "livemode": false
          *     }
          */
         ReceivePayment: {
@@ -2887,7 +2887,7 @@ export interface components {
             netAmount?: string;
             payer?: components["schemas"]["PayerSummary"];
             /**
-             * @description The ID of the money movement that paid it. Set once the customer pays. Read it with `GET /v1/transactions/{id}`.
+             * @description The ID of the money movement that paid it. Set once the customer pays. Read it with `GET /transactions/{id}`.
              * @example 7m2n9p4q1r8s5t0u3v6w9x2y
              */
             transactionId?: string;
@@ -2962,7 +2962,7 @@ export interface components {
             /**
              * Format: uri
              * @description A Paystrater page where the customer pays. Only when you created the payment with `checkoutPage: true`. Send the customer there. The part after `#` holds your public key (`key`) and never reaches a server. When you gave `checkoutEncryptionKeyId`, it also holds `kid` (the key ID) and `epk` (the encryption public key, 130 hex characters starting `04`), until the key has been rotated for more than a day or is no longer active.
-             * @example https://checkout.paystrater.com/pay/rcv_8f3k2m9q4x7v1b6n5c0z2w4e#key=pk_live_51Hc8xT2eZvKYlo2C
+             * @example https://app.paystrater.com/pay/rcv_8f3k2m9q4x7v1b6n5c0z2w4e#key=pk_test_51Hc8xT2eZvKYlo2C
              */
             checkoutUrl?: string;
             /**
@@ -3192,7 +3192,7 @@ export interface components {
              * @example 8c1f4e7a2b5d9c3e6f0a1b4d7e2c5f8a
              */
             token?: string;
-        };
+        } & (unknown | unknown);
         /** @description One page of your refunds, newest first. */
         RefundsPage: {
             /** @description The refunds, newest first. */
@@ -3366,7 +3366,7 @@ export interface components {
             status: "active" | "past_due" | "paused" | "cancelled" | "completed";
             /**
              * Format: int64
-             * @description The blockchain, by its chain ID. For example `8453` is Base, `137` is Polygon and `56` is BNB Smart Chain. `GET /v1/payment-settings` lists the chains you accept.
+             * @description The blockchain, by its chain ID. For example `8453` is Base, `137` is Polygon and `56` is BNB Smart Chain. `GET /payment-settings` lists the chains you accept.
              * @example 8453
              */
             chainId: number;
@@ -3575,7 +3575,7 @@ export interface components {
             status: "processing" | "succeeded" | "failed";
             /**
              * Format: int64
-             * @description The blockchain, by its chain ID. For example `8453` is Base, `137` is Polygon and `56` is BNB Smart Chain. `GET /v1/payment-settings` lists the chains you accept.
+             * @description The blockchain, by its chain ID. For example `8453` is Base, `137` is Polygon and `56` is BNB Smart Chain. `GET /payment-settings` lists the chains you accept.
              * @example 8453
              */
             chainId: number;
@@ -3642,7 +3642,7 @@ export interface components {
         SendPaymentQuote: {
             /**
              * Format: int64
-             * @description The blockchain, by its chain ID. For example `8453` is Base, `137` is Polygon and `56` is BNB Smart Chain. `GET /v1/payment-settings` lists the chains you accept.
+             * @description The blockchain, by its chain ID. For example `8453` is Base, `137` is Polygon and `56` is BNB Smart Chain. `GET /payment-settings` lists the chains you accept.
              * @example 8453
              */
             chainId: number;
@@ -4332,7 +4332,7 @@ export interface components {
             response?: unknown;
         };
         /**
-         * @description A swap you started. Follow it with `GET /v1/transactions/{id}` or the `swap.succeeded` and `swap.failed` events.
+         * @description A swap you started. Follow it with `GET /transactions/{id}` or the `swap.succeeded` and `swap.failed` events.
          * @example {
          *       "id": "swp_3q6r9s2t5u8v1w4x7y0z3a6b",
          *       "transactionType": "swap",
@@ -4544,7 +4544,7 @@ export interface components {
         TokenWarning: {
             /**
              * Format: int64
-             * @description The blockchain, by its chain ID. For example `8453` is Base, `137` is Polygon and `56` is BNB Smart Chain. `GET /v1/payment-settings` lists the chains you accept.
+             * @description The blockchain, by its chain ID. For example `8453` is Base, `137` is Polygon and `56` is BNB Smart Chain. `GET /payment-settings` lists the chains you accept.
              * @example 8453
              */
             chainId: number;
@@ -4639,7 +4639,7 @@ export interface components {
             depositAddress: string;
             /**
              * Format: int64
-             * @description The blockchain, by its chain ID. For example `8453` is Base, `137` is Polygon and `56` is BNB Smart Chain. `GET /v1/payment-settings` lists the chains you accept.
+             * @description The blockchain, by its chain ID. For example `8453` is Base, `137` is Polygon and `56` is BNB Smart Chain. `GET /payment-settings` lists the chains you accept.
              * @example 8453
              */
             chainId: number;
@@ -7508,9 +7508,6 @@ export interface operations {
             /** @description Successful. */
             200: {
                 headers: {
-                    "RateLimit-Limit": components["headers"]["RateLimit-Limit"];
-                    "RateLimit-Remaining": components["headers"]["RateLimit-Remaining"];
-                    "RateLimit-Reset": components["headers"]["RateLimit-Reset"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -7519,7 +7516,13 @@ export interface operations {
                     };
                 };
             };
-            429: components["responses"]["TooManyRequests"];
+            /** @description More than 300 requests a minute from your IP address. Wait until the minute is over. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             500: components["responses"]["InternalError"];
         };
     };
