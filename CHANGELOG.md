@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.2
+
+### Patch Changes
+
+- 8216681: Copy works with no extra package: after expo-clipboard and @react-native-clipboard/clipboard, the SDK now falls back to the clipboard React Native still ships in core, so Copy address, Copy amount and Copy prompt copy instead of opening the share sheet. The buttons always say Copy; only with no clipboard at all does the tap open the share sheet, and then it does not say "Copied". On Transfer to Pay, Copy address and Copy amount sit on one row that wraps when it doesn't fit.
+- 8216681: Transfer to Pay: "Send exactly …" is a calm success-toned callout instead of a large heading; button labels are centred inside every button; "Choose how to pay" is smaller and closer to the first tile; the deposit well labels the amount "Total amount" and shows it in the brand text colour (it follows a custom colorPrimary and dark mode); choosing no network says "Select a network to pay on.". The AI agent step says "Create a one-time prompt for your agent. It will pay within your limits." before a prompt exists, and "Give this prompt to your agent" only once there is one.
+
 ## 1.0.1
 
 ### Patch Changes

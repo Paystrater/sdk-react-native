@@ -94,11 +94,15 @@ describe("<PaystraterCheckout> for React Native", () => {
     fireEvent.click(await screen.findByText("Pay with an AI agent"))
     expect(screen.getByRole("button", { name: "Back to payment methods, Pay with an AI agent" })).toBeTruthy()
     expect(screen.getByRole("link", { name: "Powered by Paystrater" })).toBeTruthy()
+    // Before the prompt exists, the step says Continue creates it
+    expect(screen.getByText(/^Create a one-time prompt for your agent/)).toBeTruthy()
+    expect(screen.queryByText(/^Give this prompt/)).toBeNull()
     fireEvent.click(screen.getByText("Continue"))
     expect(await screen.findByText("Pay rcv_test0001 for Acme")).toBeTruthy()
+    expect(screen.getByText(/^Give this prompt to your agent/)).toBeTruthy()
     expect(net.calls.some((call) => call.method === "POST" && call.url.endsWith("/v1/checkout/agentic"))).toBe(true)
-    // No clipboard module in this app, so the prompt is shared
-    fireEvent.click(screen.getByText("Share prompt"))
+    // No clipboard in this app, so Copy prompt opens the share sheet
+    fireEvent.click(screen.getByText("Copy prompt"))
     expect(Share.share).toHaveBeenCalledWith({ message: "Pay rcv_test0001 for Acme" })
     expect(screen.queryByRole("button", { name: /Back to payment methods/ })).toBeNull()
   })
@@ -191,14 +195,18 @@ describe("<PaystraterCheckout> for React Native", () => {
     serve(() => ok(lockedTtp()))
     const { container } = render(<PaystraterCheckout paymentId={ID} publishableKey={PK_TEST} />)
     expect(await screen.findByRole("heading", { name: "Send exactly 25.25 USDC on Base" })).toBeTruthy()
+    expect(screen.getByText("Total amount")).toBeTruthy()
+    expect(screen.getByText("25.25 USDC")).toBeTruthy()
     const address = screen.getByText(deposit().depositAddress)
     expect(address.getAttribute("data-selectable")).toBe("true")
     expect(container.querySelector("svg")).toBeNull()
     expect(screen.getByText("Press and hold the address or the amount to copy it.")).toBeTruthy()
-    fireEvent.click(screen.getByText("Share address"))
+    // No clipboard: still labelled Copy, the share sheet opens, and nothing says Copied
+    fireEvent.click(screen.getByText("Copy address"))
     expect(Share.share).toHaveBeenCalledWith({ message: deposit().depositAddress })
-    fireEvent.click(screen.getByText("Share amount"))
+    fireEvent.click(screen.getByText("Copy amount"))
     expect(Share.share).toHaveBeenCalledWith({ message: "25.25" })
+    expect(screen.queryByText("Copied")).toBeNull()
   })
 
   it("shows Open in wallet only when a wallet can open the ethereum: link", async () => {
@@ -239,6 +247,9 @@ describe("<PaystraterCheckout> for React Native", () => {
     })
     render(<PaystraterCheckout paymentId={ID} publishableKey={PK_TEST} />)
     fireEvent.click(await screen.findByText("Transfer to Pay"))
+    // Without a network, the button asks for one in words
+    fireEvent.click(screen.getByText("Get the deposit address"))
+    expect(screen.getByText("Select a network to pay on.")).toBeTruthy()
     fireEvent.click(screen.getByRole("radio", { name: "Base" }))
     fireEvent.click(screen.getByText("Get the deposit address"))
     await screen.findByText(/Send exactly/)
