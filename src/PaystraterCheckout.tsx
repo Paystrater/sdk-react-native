@@ -1,6 +1,7 @@
 // <PaystraterCheckout> for React Native: Pay with Paystrater
 // hands off to the Paystrater app; Transfer to Pay shows the deposit with copy
-// (selectable text), share and, when a wallet can open it, an EIP-681 link.
+// (the app's clipboard module, else selectable text and share) and, when a
+// wallet can open it, an EIP-681 link.
 // No QR: the payer is on this phone. No native modules: Linking, Share, AppState.
 // It follows @paystrater/react's design (sdk-react src/react/styles.ts): a card
 // with a hairline edge, method tiles with icons, pill buttons, the amount in the
@@ -22,10 +23,12 @@ import {
   type TextStyle,
   type ViewStyle
 } from "react-native"
+import { clipboardSetter } from "./optional/clipboard.js"
 import { formatAmount, isPositiveAmount, walletLink } from "./core/amount.js"
 import type { Deposit, FieldProblem } from "./core/checkout.js"
 import { errorForPayer, type PaystraterError } from "./core/errors.js"
-import { capitalizeWords, fill, fillParts, stringsFor, type Locale, type Strings } from "./core/strings.js"
+import { capitalizeWords, fill, fillParts, type Locale } from "./core/strings.js"
+import { nativeStrings, type Strings } from "./strings.js"
 import type { CheckoutPayment, PaymentMethod } from "./core/types.js"
 import { ARROW_LEFT, CHEVRON, MARK, PAYSTRATER_SITE, SPARKLE, WALLET, WORDMARK } from "./brand.js"
 import { themeFor, type Appearance, type PaystraterTheme } from "./theme.js"
@@ -85,7 +88,7 @@ export function PaystraterCheckout(props: PaystraterCheckoutProps) {
   const c = props.checkout ?? own
   const scheme = useColorScheme()
   const theme = useMemo(() => themeFor(props.appearance, scheme === "dark"), [props.appearance, scheme])
-  const t = useMemo(() => stringsFor(props.locale, props.strings), [props.locale, props.strings])
+  const t = useMemo(() => nativeStrings(props.locale, props.strings), [props.locale, props.strings])
   const s = useMemo(() => makeStyles(theme), [theme])
   const openUrl = props.openUrl ?? ((url: string) => Linking.openURL(url))
 
@@ -385,7 +388,7 @@ function PayWithPaystrater({ ctx, title, actionError, back }: StepProps) {
         {title(t.approveInApp)}
         {sent.name ? <Text style={s.note}>{named(t.sentTo, { name: sent.name })}</Text> : null}
         <Text style={s.muted}>{t.approveInAppHint}</Text>
-        <Button ctx={ctx} label={t.openApp} onPress={() => void ctx.openUrl(link)} />
+        <Button ctx={ctx} label={t.openApp} onPress={() => void ctx.openUrl(link).catch(() => undefined)} />
         {left !== undefined ? <Text style={s.muted}>{left > 0 ? fill(t.expiresIn, { time: formatDuration(left) }) : t.expired}</Text> : null}
         <Text style={s.muted}>{t.wrongAccount}</Text>
         {actionError}
@@ -403,9 +406,8 @@ function PayWithPaystrater({ ctx, title, actionError, back }: StepProps) {
         disabled={c.busy}
         onPress={async () => {
           const res = await c.payWithPaystrater(payer)
+          // The request is sent; the Paystrater app opens only when the customer taps "Open the Paystrater app"
           setProblem(res.ok ? undefined : res.field)
-          // Hand off to the Paystrater app; without the app the link opens the web page with store links
-          if (res.ok && link) void ctx.openUrl(link).catch(() => undefined)
         }}
       />
       {back(t.methodPayWithPaystrater)}
@@ -487,7 +489,7 @@ function Agent({ ctx, title, actionError, back }: StepProps) {
         <Text selectable style={[s.well, s.mono]}>
           {prompt}
         </Text>
-        <Button ctx={ctx} kind="tonal" label={t.copyPrompt} onPress={() => void Share.share({ message: prompt })} />
+        <CopyButton ctx={ctx} value={prompt} label={t.copyPrompt} shareLabel={t.sharePrompt} />
         {actionError}
       </View>
     )
@@ -501,6 +503,14 @@ function Agent({ ctx, title, actionError, back }: StepProps) {
       {back(t.methodAgentic)}
     </View>
   )
+}
+
+/** Copies with the app's clipboard module, and says "Copied"; without one it opens the share sheet */
+function CopyButton({ ctx, value, label, shareLabel }: { ctx: Ctx; value: string; label: string; shareLabel: string }) {
+  const [done, setDone] = useState(false)
+  const copy = clipboardSetter()
+  if (!copy) return <Button ctx={ctx} kind="tonal" label={shareLabel} onPress={() => void Share.share({ message: value }).catch(() => undefined)} />
+  return <Button ctx={ctx} kind="tonal" label={done ? ctx.t.copied : label} onPress={() => void copy(value).then(() => (setDone(true), setTimeout(setDone, 2000, false)), () => undefined)} />
 }
 
 function DepositView({ ctx, deposit, title, actionError }: Omit<StepProps, "back"> & { deposit: Deposit }) {
@@ -532,15 +542,17 @@ function DepositView({ ctx, deposit, title, actionError }: Omit<StepProps, "back
       {deposit.fee && isPositiveAmount(deposit.fee) ? <Text style={s.muted}>{fill(t.fee, { fee: formatAmount(deposit.fee), token: deposit.tokenTicker })}</Text> : null}
       <View style={s.well}>
         <Text style={s.label}>{t.depositAddress}</Text>
-        {/* Selectable instead of a clipboard package: the clipboard left React Native core */}
+        {/* Selectable too, for apps without a clipboard module (see optional/clipboard.js) */}
         <Text selectable style={s.mono} accessibilityLabel={`${t.depositAddress}: ${deposit.depositAddress}`}>
           {deposit.depositAddress}
         </Text>
-        <Text selectable style={s.muted}>
+        <Text selectable style={[s.body, { fontWeight: "700" }]}>
           {formatAmount(deposit.amount)} {deposit.tokenTicker}
         </Text>
-        <Text style={s.help}>{t.selectToCopy}</Text>
-        <Button ctx={ctx} kind="tonal" label={t.shareAddress} onPress={() => void Share.share({ message: deposit.depositAddress })} />
+        {clipboardSetter() ? null : <Text style={s.help}>{t.selectToCopy}</Text>}
+        <CopyButton ctx={ctx} value={deposit.depositAddress} label={t.copyAddress} shareLabel={t.shareAddress} />
+        {/* The exact amount the server asked for, every decimal and no symbol */}
+        <CopyButton ctx={ctx} value={deposit.amount} label={t.copyAmount} shareLabel={t.shareAmount} />
       </View>
       {walletReady && link ? <Button ctx={ctx} label={t.openInWallet} onPress={() => void ctx.openUrl(link)} /> : null}
       <Text style={s.note}>{fill(t.depositNotice, { token: deposit.tokenTicker, chain })}</Text>
@@ -649,7 +661,7 @@ function makeStyles(theme: PaystraterTheme) {
     initials: { fontSize: 14, fontWeight: "600", color: k.colorPrimaryText, ...font },
     merchantName: { fontSize: 16, lineHeight: 24, fontWeight: "600", color: k.colorText, ...font },
     label: { fontSize: 12, lineHeight: 16, fontWeight: "500", color: k.colorTextMuted, ...font },
-    amount: { fontSize: 26, lineHeight: 34, fontWeight: "600", color: k.colorPrimaryText, ...mono },
+    amount: { fontSize: 26, lineHeight: 34, fontWeight: "700", color: k.colorPrimaryText, ...mono },
     token: { fontSize: 14, fontWeight: "500", color: k.colorTextMuted, ...font },
     body: { fontSize: 15, lineHeight: 22, color: k.colorTextBody, ...font },
     muted: { fontSize: 13, lineHeight: 18, color: k.colorTextMuted, ...font },

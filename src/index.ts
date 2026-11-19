@@ -9,6 +9,7 @@ export { themeFor, type Appearance, type PaystraterTheme, type ThemeName, type T
 export type { ActionResult, CheckoutState, Deposit, FieldProblem, Stage } from "./core/checkout.js"
 export type { ErrorKind, PaystraterError } from "./core/errors.js"
 export type { KeyMode } from "./core/keys.js"
-export type { Locale, Strings } from "./core/strings.js"
+export type { Locale } from "./core/strings.js"
+export type { Strings } from "./strings.js"
 export type { ChainOption, CheckoutPayment, PaymentMethod, PaymentStatus } from "./core/types.js"
 export { SDK_VERSION } from "./core/version.js"

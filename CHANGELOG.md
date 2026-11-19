@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.1
+
+### Patch Changes
+
+- Copy now copies. When the app has expo-clipboard or @react-native-clipboard/clipboard, Copy address, Copy amount and Copy prompt write to the clipboard and say "Copied"; the SDK still adds no dependency. Without either, the buttons are Share address, Share amount and Share prompt, and the address and amount stay selectable. Transfer to Pay now also offers the exact amount to copy or share.
+  
+  The amount due at the top of the checkout is now bold (700, was 600).
+  
+  On Transfer to Pay, the total amount under the address is bold.
+- Pay with Paystrater no longer opens the Paystrater app by itself after "Send to my app". The request is sent and the checkout shows the waiting state; the app opens only when the customer taps "Open the Paystrater app".
+
 ## 1.0.0
 
 ### Major Changes
