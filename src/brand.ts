@@ -7,10 +7,11 @@
 import ARROW_LEFT from "./assets/arrow.png"
 import CHEVRON from "./assets/chevron.png"
 import MARK from "./assets/mark.png"
+import SPARKLE from "./assets/sparkle.png"
 import WALLET from "./assets/wallet.png"
 import WORDMARK from "./assets/wordmark.png"
 
-/** MARK: the P mark (a method tile). WORDMARK: "Paystrater" as one graphic, 258×45 at 3x (the footer). WALLET: Transfer to Pay. */
-export { ARROW_LEFT, CHEVRON, MARK, WALLET, WORDMARK }
+/** MARK: the P mark (a method tile). WORDMARK: "Paystrater" as one graphic, 258×45 at 3x (the footer). WALLET: Transfer to Pay. SPARKLE: AI agent payments. */
+export { ARROW_LEFT, CHEVRON, MARK, SPARKLE, WALLET, WORDMARK }
 
 export const PAYSTRATER_SITE = "https://paystrater.com"

@@ -29,6 +29,8 @@ export interface PaystraterPayment extends CheckoutState {
   back(): void
   startDeposit(chainId: number, payer?: PayerDetails): Promise<ActionResult>
   payWithPaystrater(payer: string): Promise<ActionResult>
+  /** Starts an AI agent payment and gets the prompt for the customer's agent (POST /v1/checkout/agentic) */
+  startAgentic(): Promise<ActionResult>
   refresh(): void
 }
 
@@ -74,6 +76,7 @@ export function usePaystraterPayment(paymentId: string, options: PaystraterPayme
       startDeposit: (chainId: number, payer?: PayerDetails) =>
         checkout.startTransferToPay({ chainId, payerEmail: payer?.email, payerName: payer?.name, refundAddress: payer?.refundAddress }),
       payWithPaystrater: (payer: string) => checkout.payWithPaystrater(payer),
+      startAgentic: () => checkout.startAgentic(),
       refresh: () => checkout.refresh()
     }),
     [state, checkout]
