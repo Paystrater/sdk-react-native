@@ -27,7 +27,7 @@ import type { Deposit, FieldProblem } from "./core/checkout.js"
 import { errorForPayer, type PaystraterError } from "./core/errors.js"
 import { capitalizeWords, fill, fillParts, stringsFor, type Locale, type Strings } from "./core/strings.js"
 import type { CheckoutPayment, PaymentMethod } from "./core/types.js"
-import { ARROW_LEFT, CHEVRON, MARK, PAYSTRATER_SITE, WALLET, WORDMARK } from "./brand.js"
+import { ARROW_LEFT, CHEVRON, MARK, PAYSTRATER_SITE, SPARKLE, WALLET, WORDMARK } from "./brand.js"
 import { themeFor, type Appearance, type PaystraterTheme } from "./theme.js"
 import { usePaystraterPayment, type PaystraterPayment, type PaystraterPaymentOptions } from "./usePaystraterPayment.js"
 
@@ -77,8 +77,8 @@ function useCountdown(expiresAt: string | undefined, onEnd: () => void): number 
   return left
 }
 
-/** Mobile offers Pay with Paystrater and Transfer to Pay; an agent payment is the merchant's to hand to the agent */
-const MOBILE_METHODS: PaymentMethod[] = ["pay_with_paystrater", "transfer_to_pay"]
+/** The methods the checkout offers, in the payment's order, as on the web */
+const MOBILE_METHODS: PaymentMethod[] = ["pay_with_paystrater", "transfer_to_pay", "agentic"]
 
 export function PaystraterCheckout(props: PaystraterCheckoutProps) {
   const own = usePaystraterPayment(props.paymentId, { ...props, disabled: Boolean(props.checkout) })
@@ -101,7 +101,7 @@ export function PaystraterCheckout(props: PaystraterCheckoutProps) {
   const p = c.payment
   // Names are capitalized whatever case the data has (CSS capitalize on the web)
   const merchantName = p?.merchantName ? capitalizeWords(p.merchantName) : ""
-  const merchant = merchantName || "the shop"
+  const merchant = merchantName || "the business"
   const errorText = (e?: PaystraterError) => (e ? errorForPayer(e, c.mode) : undefined)
   const ctx: Ctx = { c, t, s, theme, merchant, merchantName, errorText, openUrl, onStartAgain: props.onStartAgain }
 
@@ -124,7 +124,7 @@ interface Ctx {
   t: Strings
   s: ReturnType<typeof makeStyles>
   theme: PaystraterTheme
-  /** The merchant's name in capitals, or "the shop" */
+  /** The merchant's name in capitals, or "the business" */
   merchant: string
   /** The merchant's name in capitals, or "" */
   merchantName: string
@@ -276,7 +276,7 @@ function MethodTile({ ctx, method, title, hint }: { ctx: Ctx; method: PaymentMet
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={`${title}. ${hint}`} onPress={() => c.choose(method)} style={({ pressed }) => [s.method, pressed ? s.methodPressed : null]}>
       <View style={s.methodIcon}>
-        <Image source={method === "pay_with_paystrater" ? MARK : WALLET} style={[s.methodIconImage, { tintColor: theme.colors.colorPrimaryText }]} accessibilityIgnoresInvertColors />
+        <Image source={method === "pay_with_paystrater" ? MARK : method === "transfer_to_pay" ? WALLET : SPARKLE} style={[s.methodIconImage, { tintColor: theme.colors.colorPrimaryText }]} accessibilityIgnoresInvertColors />
       </View>
       <View style={s.grow}>
         <Text style={s.methodTitle}>{title}</Text>
@@ -330,8 +330,14 @@ function Body({ ctx }: { ctx: Ctx }) {
                 key={m}
                 ctx={ctx}
                 method={m}
-                title={m === "pay_with_paystrater" ? t.methodPayWithPaystrater : t.methodTransferToPay}
-                hint={m === "pay_with_paystrater" ? t.methodPayWithPaystraterHint : fill(t.methodTransferToPayHint, { chains: c.chains.map((x) => x.chainName).join(", ") })}
+                title={m === "pay_with_paystrater" ? t.methodPayWithPaystrater : m === "transfer_to_pay" ? t.methodTransferToPay : t.methodAgentic}
+                hint={
+                  m === "pay_with_paystrater"
+                    ? t.methodPayWithPaystraterHint
+                    : m === "transfer_to_pay"
+                      ? fill(t.methodTransferToPayHint, { chains: c.chains.map((x) => x.chainName).join(", ") })
+                      : t.methodAgenticHint
+                }
               />
             ))}
           </View>
@@ -343,20 +349,7 @@ function Body({ ctx }: { ctx: Ctx }) {
     case "transfer_to_pay":
       return c.deposit ? <DepositView ctx={ctx} deposit={c.deposit} title={title} actionError={actionError} /> : <TransferForm ctx={ctx} title={title} actionError={actionError} back={back} />
     case "agentic":
-      return (
-        <View style={s.stack}>
-          {title(t.agentTitle)}
-          <Text style={s.muted}>{t.agentHint}</Text>
-          {c.payment?.agentPrompt ? (
-            <>
-              <Text selectable style={[s.well, s.mono]}>
-                {c.payment.agentPrompt}
-              </Text>
-              <Button ctx={ctx} kind="tonal" label={t.copyPrompt} onPress={() => void Share.share({ message: c.payment!.agentPrompt! })} />
-            </>
-          ) : null}
-        </View>
-      )
+      return <Agent ctx={ctx} title={title} actionError={actionError} back={back} />
     case "processing":
     case "updating":
       return (
@@ -482,6 +475,34 @@ function TransferForm({ ctx, title, actionError, back }: StepProps) {
   )
 }
 
+/** An AI agent payment: Continue gets the prompt (POST /v1/checkout/agentic), which the customer shares with their agent */
+function Agent({ ctx, title, actionError, back }: StepProps) {
+  const { c, t, s } = ctx
+  const prompt = c.payment?.agentPrompt
+  if (prompt) {
+    return (
+      <View style={s.stack}>
+        {title(t.agentTitle)}
+        <Text style={s.muted}>{t.agentHint}</Text>
+        <Text selectable style={[s.well, s.mono]}>
+          {prompt}
+        </Text>
+        <Button ctx={ctx} kind="tonal" label={t.copyPrompt} onPress={() => void Share.share({ message: prompt })} />
+        {actionError}
+      </View>
+    )
+  }
+  return (
+    <View style={s.stack}>
+      {title(t.agentTitle, true)}
+      <Text style={s.muted}>{t.agentHint}</Text>
+      {actionError}
+      <Button ctx={ctx} label={t.continue} disabled={c.busy} onPress={() => void c.startAgentic()} />
+      {back(t.methodAgentic)}
+    </View>
+  )
+}
+
 function DepositView({ ctx, deposit, title, actionError }: Omit<StepProps, "back"> & { deposit: Deposit }) {
   const { c, t, s } = ctx
   const left = useCountdown(deposit.expiresAt, c.refresh)
@@ -602,7 +623,7 @@ function Result({ ctx, title }: { ctx: Ctx; title: (text: string) => ReactNode }
         {mark}
       </Text>
       {title(heading)}
-      {hint ? <Text style={[s.muted, s.center]}>{hint}</Text> : null}
+      {hint ? <Text style={[s.muted, s.center]}>{hint.charAt(0).toUpperCase() + hint.slice(1)}</Text> : null}
       {p.status === "expired" && !c.underpaid && !c.late && ctx.onStartAgain ? <Button ctx={ctx} kind="secondary" label={t.startAgain} onPress={ctx.onStartAgain} /> : null}
     </View>
   )

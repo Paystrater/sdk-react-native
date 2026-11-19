@@ -1,7 +1,7 @@
 {
   "name": "@paystrater/react-native",
-  "version": "0.1.0-next.7",
-  "description": "Paystrater checkout for React Native: Pay with Paystrater and Transfer to Pay, in plain JavaScript with no native modules.",
+  "version": "1.0.0",
+  "description": "Accept stablecoin and crypto payments in React Native and Expo with Paystrater, including USDC, USDT, ETH, BNB and SOL. Supports Pay with Paystrater, Transfer to Pay and AI agent payments, with no native modules.",
   "license": "MIT",
   "author": "Paystrater",
   "homepage": "https://docs.paystrater.com/docs/sdks/react-native",
@@ -14,9 +14,16 @@
     "paystrater",
     "checkout",
     "payments",
+    "crypto-payments",
     "stablecoin",
+    "usdc",
+    "usdt",
+    "ethereum",
+    "bnb",
+    "solana",
     "react-native",
-    "expo"
+    "expo",
+    "ai-agents"
   ],
   "type": "module",
   "sideEffects": false,

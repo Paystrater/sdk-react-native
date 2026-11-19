@@ -67,13 +67,40 @@ describe("AppState activity", () => {
 })
 
 describe("<PaystraterCheckout> for React Native", () => {
-  it("offers Pay with Paystrater and Transfer to Pay, not the agent", async () => {
+  it("offers Pay with Paystrater, Transfer to Pay and an AI agent, as the web does", async () => {
     serve(() => ok(payment()))
     render(<PaystraterCheckout paymentId={ID} publishableKey={PK_TEST} />)
     expect(await screen.findByText("Pay with Paystrater")).toBeTruthy()
     expect(screen.getByText("Transfer to Pay")).toBeTruthy()
-    expect(screen.queryByText("Pay with an AI agent")).toBeNull()
+    expect(screen.getByText("Pay with an AI agent")).toBeTruthy()
+    expect(screen.getByText("Your agent pays within the limits you set")).toBeTruthy()
     expect(screen.getByText("Test mode")).toBeTruthy()
+  })
+
+  it("starts an AI agent payment, shows the prompt to share, and goes back before starting", async () => {
+    let started = false
+    const net = serve((req) => {
+      if (req.method === "POST") started = true
+      return ok(started ? payment({ method: "agentic", agentPrompt: "Pay rcv_test0001 for Acme", methods: undefined }) : payment())
+    })
+    render(<PaystraterCheckout paymentId={ID} publishableKey={PK_TEST} />)
+    fireEvent.click(await screen.findByText("Pay with an AI agent"))
+    expect(screen.getByRole("button", { name: "Back to payment methods, Pay with an AI agent" })).toBeTruthy()
+    expect(screen.getByRole("link", { name: "Powered by Paystrater" })).toBeTruthy()
+    fireEvent.click(screen.getByText("Continue"))
+    expect(await screen.findByText("Pay rcv_test0001 for Acme")).toBeTruthy()
+    expect(net.calls.some((call) => call.method === "POST" && call.url.endsWith("/v1/checkout/agentic"))).toBe(true)
+    fireEvent.click(screen.getByText("Copy prompt"))
+    expect(Share.share).toHaveBeenCalledWith({ message: "Pay rcv_test0001 for Acme" })
+    expect(screen.queryByRole("button", { name: /Back to payment methods/ })).toBeNull()
+  })
+
+  it("goes back from the AI agent step to the methods", async () => {
+    serve(() => ok(payment()))
+    render(<PaystraterCheckout paymentId={ID} publishableKey={PK_TEST} />)
+    fireEvent.click(await screen.findByText("Pay with an AI agent"))
+    fireEvent.click(screen.getByRole("button", { name: "Back to payment methods, Pay with an AI agent" }))
+    expect(await screen.findByText("Choose how to pay")).toBeTruthy()
   })
 
   it("shows Powered by Paystrater on every screen, opening paystrater.com", async () => {
