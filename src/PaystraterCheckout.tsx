@@ -23,6 +23,7 @@ import {
   type TextStyle,
   type ViewStyle
 } from "react-native"
+import { AGENT_GUIDE_URL, agentMcpUrl } from "./core/agentConnect.js"
 import { clipboardSetter } from "./optional/clipboard.js"
 import { formatAmount, isPositiveAmount, walletLink } from "./core/amount.js"
 import type { Deposit, FieldProblem } from "./core/checkout.js"
@@ -493,6 +494,7 @@ function Agent({ ctx, title, actionError, back }: StepProps) {
           {prompt}
         </Text>
         <CopyButton ctx={ctx} value={prompt} label={t.copyPrompt} />
+        <AgentConnect ctx={ctx} />
         {actionError}
       </View>
     )
@@ -503,7 +505,61 @@ function Agent({ ctx, title, actionError, back }: StepProps) {
       <Text style={s.muted}>{t.agentStartHint}</Text>
       {actionError}
       <Button ctx={ctx} label={t.continue} disabled={c.busy} onPress={() => void c.startAgentic()} />
+      <AgentConnect ctx={ctx} />
       {back(t.methodAgentic)}
+    </View>
+  )
+}
+
+/** "How to connect your AI agent": closed until the customer opens it */
+function AgentConnect({ ctx }: { ctx: Ctx }) {
+  const { c, t, s } = ctx
+  const [open, setOpen] = useState(false)
+  const url = agentMcpUrl(c.mode)
+  const steps = [
+    [t.agentConnectStep1Title, t.agentConnectStep1],
+    [t.agentConnectStep2Title, t.agentConnectStep2],
+    [t.agentConnectStep3Title, t.agentConnectStep3],
+    [t.agentConnectStep4Title, t.agentConnectStep4]
+  ]
+  return (
+    <View style={s.acc}>
+      <Pressable accessibilityRole="button" accessibilityState={{ expanded: open }} onPress={() => setOpen((was) => !was)} style={s.accHead}>
+        <Text style={s.accTitle}>{t.agentConnectTitle}</Text>
+        <View style={[s.accChev, open ? s.accChevOpen : null]} />
+      </Pressable>
+      {open ? (
+        <View style={s.accBody}>
+          {steps.map(([lead, body], i) => (
+            <View key={i} style={s.accStep}>
+              <Text style={s.accNum}>{i + 1}</Text>
+              <View style={s.grow}>
+                <Text style={s.accText}>
+                  <Text style={s.accLead}>{lead}</Text> {body}
+                </Text>
+                {i === 0 ? (
+                  <View style={s.accUrl}>
+                    <Text selectable style={[s.mono, s.grow, { fontSize: 12 }]}>
+                      {url.replace(/^https:\/\//, "")}
+                    </Text>
+                    <CopyButton ctx={ctx} value={url} label={t.copy} />
+                  </View>
+                ) : null}
+              </View>
+            </View>
+          ))}
+          <View style={s.accWallet}>
+            <Text style={s.accLabel}>{t.agentWalletTitle}</Text>
+            <Text style={s.accText}>
+              <Text style={[s.accLead, { fontWeight: "500" }]}>{t.agentWalletLead}</Text> {t.agentWalletBody}
+            </Text>
+            <Text style={s.accSmall}>{t.agentWalletLimits}</Text>
+          </View>
+          <Pressable accessibilityRole="link" onPress={() => void ctx.openUrl(AGENT_GUIDE_URL).catch(() => undefined)} style={s.accLink}>
+            <Text style={s.linkText}>{t.agentGuide}</Text>
+          </Pressable>
+        </View>
+      ) : null}
     </View>
   )
 }
@@ -669,6 +725,21 @@ function makeStyles(theme: PaystraterTheme) {
     header: { gap: 4, marginBottom: 20 },
     row: { flexDirection: "row", alignItems: "center", gap: 10 },
     actions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+    acc: { borderWidth: 1, borderColor: k.colorBorder, borderRadius: theme.borderRadiusSurface, overflow: "hidden" },
+    accHead: { minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, paddingHorizontal: 16 },
+    accTitle: { flex: 1, fontSize: 14, lineHeight: 20, fontWeight: "500", color: k.colorText, ...font },
+    accChev: { width: 8, height: 8, marginTop: -3, borderRightWidth: 1.5, borderBottomWidth: 1.5, borderColor: k.colorTextMuted, transform: [{ rotate: "45deg" }] },
+    accChevOpen: { marginTop: 3, transform: [{ rotate: "-135deg" }] },
+    accBody: { gap: 16, padding: 16, borderTopWidth: 1, borderTopColor: k.colorBorder },
+    accStep: { flexDirection: "row", gap: 10 },
+    accNum: { width: 22, height: 22, borderRadius: 11, overflow: "hidden", textAlign: "center", lineHeight: 22, fontSize: 12, fontWeight: "600", color: k.colorPrimaryText, backgroundColor: k.colorPrimarySoft, ...font },
+    accText: { fontSize: 13, lineHeight: 19, color: k.colorTextMuted, ...font },
+    accLead: { fontWeight: "600", color: k.colorText },
+    accUrl: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 8, paddingVertical: 6, paddingRight: 6, paddingLeft: 12, backgroundColor: k.colorSurface, borderWidth: 1, borderColor: k.colorBorder, borderRadius: theme.borderRadius },
+    accWallet: { gap: 6, paddingVertical: 12, paddingHorizontal: 14, backgroundColor: k.colorPrimarySoft, borderRadius: theme.borderRadiusSurface },
+    accLabel: { fontSize: 12, lineHeight: 16, fontWeight: "600", color: k.colorPrimaryText, ...font },
+    accSmall: { fontSize: 12, lineHeight: 17, color: k.colorTextMuted, ...font },
+    accLink: { alignSelf: "flex-start", minHeight: 32, justifyContent: "center" },
     methodsTitle: { fontSize: 16, lineHeight: 22, fontWeight: "600", color: k.colorText, marginBottom: -4, ...font },
     callout: { padding: 12, borderRadius: theme.borderRadiusSurface, backgroundColor: k.colorSuccessSoft },
     calloutText: { fontSize: 14, lineHeight: 20, fontWeight: "600", color: k.colorSuccess, ...font },

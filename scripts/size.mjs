@@ -1,11 +1,12 @@
-// Size budget, checked in CI: under 46 KB of JavaScript,
+// Size budget, checked in CI: under 50 KB of JavaScript,
 // minified, with react and react-native left out. Raised from 40 KB for the
 // design shared with the web (method tiles, the back row, Powered by), then to
-// 46 KB for Copy (clipboard, copy amount, the "Copied" state); the brand
+// 46 KB for Copy (clipboard, copy amount, the "Copied" state), then to 50 KB
+// for the "How to connect your AI agent" guide; the brand
 // images and the optional clipboard loader are separate files and do not count.
 import { build } from "esbuild"
 
-const BUDGET = 46 * 1024
+const BUDGET = 50 * 1024
 const result = await build({
   entryPoints: ["src/index.ts"],
   bundle: true,
