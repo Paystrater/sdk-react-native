@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.4
+
+### Patch Changes
+
+- c67a02d: Pay with Paystrater speaks of approving in the app rather than a PIN, since the app also approves with fingerprint and Face ID.
+
 ## 1.0.3
 
 ### Patch Changes
