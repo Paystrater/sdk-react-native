@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { appStateActivity, PaystraterCheckout, themeFor } from "../src/index.js"
 import type { CheckoutPayment } from "../src/core/types.js"
-import { deposit, fakeFetch, ID, ok, payment, PK_TEST, type Recorded } from "./helpers.js"
+import { deposit, fakeFetch, ID, ok, payment, PK_LIVE, PK_TEST, type Recorded } from "./helpers.js"
 import { Linking, setAppState, Share } from "./react-native.js"
 
 // The app's clipboard module, if any (src/optional/clipboard.js); none by default
@@ -105,6 +105,35 @@ describe("<PaystraterCheckout> for React Native", () => {
     fireEvent.click(screen.getByText("Copy prompt"))
     expect(Share.share).toHaveBeenCalledWith({ message: "Pay rcv_test0001 for Acme" })
     expect(screen.queryByRole("button", { name: /Back to payment methods/ })).toBeNull()
+  })
+
+  it("keeps How to connect your AI agent closed until tapped, with the sandbox server on a test key", async () => {
+    const copied: string[] = []
+    clip.setter = async (text) => copied.push(text)
+    const openUrl = vi.fn(async () => true)
+    serve(() => ok(payment()))
+    render(<PaystraterCheckout paymentId={ID} publishableKey={PK_TEST} openUrl={openUrl} />)
+    fireEvent.click(await screen.findByText("Pay with an AI agent"))
+    const toggle = screen.getByRole("button", { name: "How to connect your AI agent" })
+    expect(toggle.getAttribute("aria-expanded")).toBe("false")
+    expect(screen.queryByText("staging-agentic.paystrater.com/mcp")).toBeNull()
+    fireEvent.click(toggle)
+    expect(screen.getByRole("button", { name: "How to connect your AI agent" }).getAttribute("aria-expanded")).toBe("true")
+    expect(screen.getByText("staging-agentic.paystrater.com/mcp")).toBeTruthy()
+    expect(screen.getByText(/Prefer a separate wallet for your agent\?/)).toBeTruthy()
+    fireEvent.click(screen.getByText("Copy"))
+    await waitFor(() => expect(copied).toEqual(["https://staging-agentic.paystrater.com/mcp"]))
+    fireEvent.click(screen.getByText("Read the full guide"))
+    expect(openUrl).toHaveBeenCalledWith("https://paystrater.com/mcp")
+  })
+
+  it("shows the live MCP server on a live key", async () => {
+    serve(() => ok(payment({ livemode: true })))
+    render(<PaystraterCheckout paymentId={ID} publishableKey={PK_LIVE} />)
+    fireEvent.click(await screen.findByText("Pay with an AI agent"))
+    fireEvent.click(screen.getByRole("button", { name: "How to connect your AI agent" }))
+    expect(screen.getByText("agentic.paystrater.com/mcp")).toBeTruthy()
+    expect(screen.queryByText(/staging-agentic/)).toBeNull()
   })
 
   it("goes back from the AI agent step to the methods", async () => {
