@@ -139,7 +139,7 @@ interface Ctx {
 
 function announce(c: PaystraterPayment, t: Strings): string {
   if (c.stage === "processing") return t.statusProcessing
-  if (c.stage === "final") return c.status === "succeeded" ? t.statusSucceeded : c.underpaid ? t.statusUnderpaid : c.late ? t.statusLate : c.status === "expired" ? t.statusExpired : c.status === "cancelled" ? t.statusCancelled : t.statusFailed
+  if (c.stage === "final") return c.status === "succeeded" ? t.statusSucceeded : c.underpaid ? t.statusUnderpaid : c.status === "expired" ? t.statusExpired : c.status === "cancelled" ? t.statusCancelled : t.statusFailed
   return ""
 }
 
@@ -682,13 +682,9 @@ function Result({ ctx, title }: { ctx: Ctx; title: (text: string) => ReactNode }
   } else if (c.underpaid) {
     heading = t.statusUnderpaid
     hint = t.statusUnderpaidHint
-  } else if (c.late) {
-    heading = t.statusLate
-    hint = t.statusLateHint
-    tone = s.markNeutral
   } else if (p.status === "expired") {
     heading = t.statusExpired
-    hint = fill(t.statusExpiredHint, { merchant })
+    hint = fill(p.method === "transfer_to_pay" ? t.statusExpiredTransferHint : t.statusExpiredHint, { merchant })
     tone = s.markNeutral
   } else if (p.status === "cancelled") {
     heading = t.statusCancelled
@@ -706,7 +702,7 @@ function Result({ ctx, title }: { ctx: Ctx; title: (text: string) => ReactNode }
       </Text>
       {title(heading)}
       {hint ? <Text style={[s.muted, s.center]}>{hint.charAt(0).toUpperCase() + hint.slice(1)}</Text> : null}
-      {p.status === "expired" && !c.underpaid && !c.late && ctx.onStartAgain ? <Button ctx={ctx} kind="secondary" label={t.startAgain} onPress={ctx.onStartAgain} /> : null}
+      {p.status === "expired" && !c.underpaid && ctx.onStartAgain ? <Button ctx={ctx} kind="secondary" label={t.startAgain} onPress={ctx.onStartAgain} /> : null}
     </View>
   )
 }
